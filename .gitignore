@@ -1,0 +1,14 @@
+# API Key and Secrets
+.env
+
+# Python caching
+__pycache__/
+*.pyc
+
+# Local backup and scratch folders
+backup/
+scratch/
+instruction.txt
+
+# Streamlit session/runtime files (keep config.toml)
+!.streamlit/config.toml
