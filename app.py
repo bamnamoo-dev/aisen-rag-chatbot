@@ -61,10 +61,27 @@ st.sidebar.markdown("""
 
 if admin_mode:
     st.sidebar.markdown("""
-        <div style="background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(225, 29, 72, 0.03);">
+        <div style="background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(225, 29, 72, 0.03);">
             <span style="color: #e11d48; font-size: 1rem;">⚙️</span> [관리자 모드] 활성화됨
         </div>
     """, unsafe_allow_html=True)
+    
+    if st.session_state.selected_category:
+        if st.sidebar.button("♻️ 현재 카테고리 캐시 재빌드", use_container_width=True):
+            cat_to_rebuild = st.session_state.selected_category
+            # 1. 세션 캐시 제거
+            if cat_to_rebuild in st.session_state.vector_db:
+                del st.session_state.vector_db[cat_to_rebuild]
+            # 2. 물리 파일 제거
+            cat_path = os.path.join(manuals_root, cat_to_rebuild)
+            cache_file = os.path.join(cat_path, ".vector_cache.pkl")
+            if os.path.exists(cache_file):
+                try:
+                    os.remove(cache_file)
+                except Exception as e:
+                    st.sidebar.error(f"캐시 파일 삭제 실패: {e}")
+            st.rerun()
+
 
 st.sidebar.markdown("""
     <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; padding-left: 4px;">ACTIVE CHANNELS</div>
