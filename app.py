@@ -57,6 +57,16 @@ st.sidebar.markdown("""
             <div style="font-size: 0.7rem; font-weight: 700; color: #1e60ff; letter-spacing: 0.05em; margin-top: 1px;">ADMIN RAG SYSTEM</div>
         </div>
     </div>
+""", unsafe_allow_html=True)
+
+if admin_mode:
+    st.sidebar.markdown("""
+        <div style="background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(225, 29, 72, 0.03);">
+            <span style="color: #e11d48; font-size: 1rem;">⚙️</span> [관리자 모드] 활성화됨
+        </div>
+    """, unsafe_allow_html=True)
+
+st.sidebar.markdown("""
     <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; padding-left: 4px;">ACTIVE CHANNELS</div>
 """, unsafe_allow_html=True)
 
