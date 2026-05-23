@@ -122,6 +122,45 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
             
     return np.array(embeddings_list)
 
+def build_category_cache(category, manuals_root, client, model_name):
+    cat_path = os.path.join(manuals_root, category)
+    
+    # PDF 파일이 아예 없는 폴더는 스캔 대상에서 제외 (불필요한 빌드 방지)
+    pdf_files = [f for f in os.listdir(cat_path) if f.lower().endswith('.pdf')]
+    if not pdf_files:
+        return False
+        
+    current_hash = get_folder_hash(cat_path, model_name)
+    
+    # 1. 기존 캐시 파일 로드 및 해시 일치 여부 확인
+    db = LocalVectorDB(category)
+    if db.load_local(cat_path, current_hash):
+        print(f"   ➔ [{category}] 변경 없음 (캐시가 최신 상태입니다. 건너뜀)")
+        return False
+        
+    print(f"\n📂 [{category}] 변경 감지! 벡터 DB 빌드를 시작합니다. (경로: {cat_path})")
+    print(f"🔑 폴더 해시: {current_hash}")
+    
+    # PDF 파싱
+    chunks = get_pdf_chunks_cli(cat_path)
+    if not chunks:
+        print(f"   ⚠️ [{category}] 파싱된 PDF 파일이 없거나 텍스트가 비어 있습니다. 건너뜁니다.")
+        return False
+        
+    # 임베딩 생성
+    embeddings = create_embeddings_cli(chunks, client, model_name)
+    if embeddings is None or len(embeddings) == 0:
+        print(f"   ❌ [{category}] 임베딩 벡터 생성에 실패했습니다.")
+        sys.exit(1)
+        
+    # 로컬 저장
+    db.chunks = chunks
+    db.embeddings = embeddings
+    db.build_index()
+    db.save_local(cat_path, current_hash)
+    print(f"   🎉 [{category}] 벡터 데이터베이스 빌드 완료! (.vector_cache.pkl)")
+    return True
+
 def main():
     load_dotenv()
     api_key = os.getenv("GOOGLE_API_KEY")
@@ -130,67 +169,31 @@ def main():
         sys.exit(1)
         
     manuals_root = "manuals"
-    
-    # 카테고리 입력 받기
-    if len(sys.argv) < 2:
-        # 폴더 목록 보여주기
-        if not os.path.exists(manuals_root):
-            print(f"❌ 에러: {manuals_root} 폴더가 존재하지 않습니다.")
-            sys.exit(1)
-        categories = sorted([d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d))])
-        print("사용 가능한 카테고리 목록:")
-        for idx, cat in enumerate(categories):
-            print(f"  {idx + 1}. {cat}")
-        
-        try:
-            choice = input("\n분석할 카테고리 번호 또는 이름을 입력하세요: ").strip()
-            if not choice:
-                print("입력이 없습니다. 종료합니다.")
-                sys.exit(0)
-            if choice.isdigit() and 1 <= int(choice) <= len(categories):
-                category = categories[int(choice) - 1]
-            else:
-                category = choice
-        except (KeyboardInterrupt, EOFError):
-            print("\n종료합니다.")
-            sys.exit(0)
-    else:
-        category = sys.argv[1]
-        
-    cat_path = os.path.join(manuals_root, category)
-    if not os.path.exists(cat_path):
-        print(f"❌ 에러: '{cat_path}' 폴더가 존재하지 않습니다.")
+    if not os.path.exists(manuals_root):
+        print(f"❌ 에러: {manuals_root} 폴더가 존재하지 않습니다.")
         sys.exit(1)
         
     model_name = "gemini-embedding-2"
     client = genai.Client(api_key=api_key)
     
-    # 해시 계산
-    current_hash = get_folder_hash(cat_path, model_name)
-    print(f"📂 카테고리: {category} (경로: {cat_path})")
-    print(f"🔑 폴더 해시: {current_hash}")
-    
-    # PDF 파싱
-    chunks = get_pdf_chunks_cli(cat_path)
-    if not chunks:
-        print("❌ 파싱된 텍스트가 없습니다. PDF 파일이 있는지 확인해 주세요.")
-        sys.exit(1)
+    # 카테고리가 인자로 전달된 경우
+    if len(sys.argv) >= 2:
+        category = sys.argv[1]
+        build_category_cache(category, manuals_root, client, model_name)
+    else:
+        # 인자가 없는 경우: 모든 카테고리 자동 스캔 및 변경된 폴더만 빌드
+        print("🔍 모든 지침서 폴더의 변경 사항(파일 추가/수정/삭제)을 감지합니다...")
+        categories = sorted([d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d))])
         
-    # 임베딩 생성
-    embeddings = create_embeddings_cli(chunks, client, model_name)
-    if embeddings is None or len(embeddings) == 0:
-        print("❌ 임베딩 벡터 생성에 실패했습니다.")
-        sys.exit(1)
-        
-    # LocalVectorDB 객체 생성 및 로컬 저장
-    db = LocalVectorDB(category)
-    db.chunks = chunks
-    db.embeddings = embeddings
-    db.build_index()
-    db.save_local(cat_path, current_hash)
-    
-    print(f"🎉 성공: '{category}' 카테고리의 벡터 데이터베이스 빌드 완료!")
-    print(f"💾 저장 위치: {os.path.join(cat_path, '.vector_cache.pkl')}")
+        rebuilt_count = 0
+        for cat in categories:
+            if build_category_cache(cat, manuals_root, client, model_name):
+                rebuilt_count += 1
+                
+        if rebuilt_count == 0:
+            print("\n✅ 모든 카테고리가 최신 상태입니다. 업데이트할 변경 사항이 없습니다.")
+        else:
+            print(f"\n🎉 총 {rebuilt_count}개의 카테고리 벡터 DB가 성공적으로 갱신되었습니다!")
 
 if __name__ == "__main__":
     main()
