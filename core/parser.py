@@ -92,11 +92,22 @@ class RecursiveCharacterTextSplitter:
 def table_to_markdown(table_data):
     if not table_data or len(table_data) < 1:
         return ""
-    has_content = False
+        
+    total_cells = 0
+    content_cells = 0
     for row in table_data:
-        if any(cell is not None and str(cell).strip() != "" for cell in row):
-            has_content = True
-            break
+        for cell in row:
+            total_cells += 1
+            if cell is not None and str(cell).strip() != "":
+                content_cells += 1
+                
+    if total_cells > 10:
+        density = content_cells / total_cells
+        # 텍스트 밀도가 5% 미만인 테이블은 레이아웃 데코레이션이나 빈 그리드 오류로 간주하여 무시
+        if density < 0.05:
+            return ""
+            
+    has_content = content_cells > 0
     if not has_content:
         return ""
         
@@ -156,8 +167,18 @@ def get_pdf_chunks(folder_path):
                 if text:
                     page_chunks = splitter.split_text(text)
                     for c_idx, c_text in enumerate(page_chunks):
+                        content_stripped = c_text.strip()
+                        # 무의미하게 표 기호(|)와 공백만 가득한 청크 필터링 (글자 수가 너무 적은 경우 제외)
+                        non_ws = "".join(content_stripped.split())
+                        if non_ws:
+                            table_char_count = non_ws.count('|') + non_ws.count('-')
+                            letters_count = len([char for char in non_ws if char.isalnum()])
+                            # 청크의 50% 이상이 표 기호이고, 실제 한글/영어/숫자 글자수가 15자 미만이면 무시
+                            if len(non_ws) > 0 and (table_char_count / len(non_ws) > 0.5) and letters_count < 15:
+                                continue
+                                
                         chunks.append({
-                            "content": c_text.strip(),
+                            "content": content_stripped,
                             "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
                         })
             doc.close()

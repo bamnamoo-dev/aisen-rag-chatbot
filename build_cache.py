@@ -75,15 +75,18 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
     texts = [c["content"] for c in chunks]
     embeddings_list = []
     
-    batch_size = 500
+    batch_size = 100
     total_batches = (len(texts) + batch_size - 1) // batch_size
     print(f"[2/2] 🚀 Google Gemini API를 사용하여 임베딩 분석을 진행합니다. (총 {total_batches}개 배치)")
     
+    from google.genai import types
     for i in range(0, len(texts), batch_size):
+
         batch = texts[i:i + batch_size]
         batch_idx = i // batch_size
+        contents_batch = [types.Content(parts=[types.Part.from_text(text=t)]) for t in batch]
         
-        max_retries = 5
+        max_retries = 10
         retry_delay = 5.0
         success = False
         
@@ -92,10 +95,11 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
                 print(f"   -> 임베딩 변환 중 ({batch_idx + 1}/{total_batches} 묶음)...", end="", flush=True)
                 response = client.models.embed_content(
                     model=model_name,
-                    contents=batch
+                    contents=contents_batch
                 )
                 for emb in response.embeddings:
                     embeddings_list.append(emb.values)
+
                 success = True
                 print(" 완료")
                 break
@@ -112,6 +116,9 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
         if not success:
             print("\n   ❌ 구글 API 트래픽 제한으로 분석이 중단되었습니다.")
             return []
+            
+        # 유료 티어 속도 향상을 위해 대기시간 단축 (기존 60.0초 -> 0.2초)
+        time.sleep(0.2)
             
     return np.array(embeddings_list)
 

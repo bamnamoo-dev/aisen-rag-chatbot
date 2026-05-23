@@ -64,19 +64,22 @@ def create_embeddings(chunks, client, model_name="gemini-embedding-2"):
     texts = [c["content"] for c in chunks]
     embeddings_list = []
     
-    # 배치 사이즈를 500으로 올려 호출 횟수 자체를 극단적으로 최소화
-    batch_size = 500
+    # API 배치 크기 한도(최대 100개)에 맞춤
+    batch_size = 100
     total_batches = (len(texts) + batch_size - 1) // batch_size
     
     progress_bar = st.sidebar.progress(0.0)
     status_text = st.sidebar.empty()
-    
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         batch_idx = i // batch_size
+        from google.genai import types
+        contents_batch = [types.Content(parts=[types.Part.from_text(text=t)]) for t in batch]
+
+
         
         # 429 Too Many Requests 대비 지능형 재시도 루프 (Exponential Backoff)
-        max_retries = 5
+        max_retries = 10
         retry_delay = 5.0  # 초기 대기시간 5초
         success = False
         
@@ -85,7 +88,7 @@ def create_embeddings(chunks, client, model_name="gemini-embedding-2"):
                 status_text.text(f"🚀 분석 진행 중 ({batch_idx + 1}/{total_batches} 묶음)...")
                 response = client.models.embed_content(
                     model=model_name,
-                    contents=batch
+                    contents=contents_batch
                 )
                 for emb in response.embeddings:
                     embeddings_list.append(emb.values)
@@ -102,9 +105,11 @@ def create_embeddings(chunks, client, model_name="gemini-embedding-2"):
                     return []
         
         if not success:
-            st.error("구글 API 트래픽 제한이 풀리지 않아 분석이 중단되었습니다. 잠시 후 다시 시도해 주세요.")
+            st.error("구글 API 트래픽 제한이 일시적으로 중단되었습니다. 잠시 후 다시 시도해 주세요.")
             return []
             
+        # 유료 티어 속도 향상을 위해 대기시간 단축 (기존 60.0초 -> 0.2초)
+        time.sleep(0.2)
         progress_bar.progress(float(batch_idx + 1) / total_batches)
         
     progress_bar.empty()
