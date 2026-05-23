@@ -6,7 +6,7 @@
 
 ## 1. 아키텍처 및 시스템 흐름 (System Flowchart)
 
-본 시스템은 외부 프레임워크 종속성을 배제하고, 로컬 연산 성능을 최대화할 수 있도록 순수 Python 및 고성능 모듈(`PyMuPDF`, `FAISS`, `SBERT`)로 구축된 **단일 프로세스 파이프라인**을 제공합니다.
+본 시스템은 외부 프레임워크 종속성을 배제하고, 로컬 연산 성능을 최대화할 수 있도록 순수 Python 및 고성능 모듈(`PyMuPDF`, `FAISS`, `Google Gemini API`)로 구축된 **단일 프로세스 파이프라인**을 제공합니다.
 
 ```mermaid
 flowchart TD
@@ -20,14 +20,14 @@ flowchart TD
     end
 
     subgraph 2. 벡터 인덱싱 단계 (FAISS Indexing)
-        F --> G[SBERT ko-sroberta-multitask 로컬 임베딩 생성]
+        F --> G[Google Gemini API gemini-embedding-2 다중 임베딩 생성]
         G --> H[L2 Normalization 정규화]
         H --> I[faiss.IndexFlatIP 코사인 유사도 인덱스 생성]
         I --> J[LocalVectorDB 직렬화 캐싱저장]
     end
 
     subgraph 3. RAG 추론 단계 (Query & Inference)
-        K[사용자 질문 입력] --> L[SBERT 쿼리 임베딩 생성 및 L2 정규화]
+        K[사용자 질문 입력] --> L[Google Gemini API 쿼리 임베딩 생성 및 L2 정규화]
         L --> M[FAISS IndexFlatIP 초고속 서치]
         M --> N[0.5 유사도 Threshold 필터링 및 맥락 보강]
         N --> O[Gemini 2.5 Flash / Fallback LLM 호출]
@@ -94,10 +94,10 @@ class RecursiveCharacterTextSplitter:
 ### 3.3. `retrieve_top_chunks(query, category, k=15, threshold=0.5)` (유사도 하한 필터링 검색)
 * **목적**: FAISS 인덱스를 탐색하여 최상위 유효 조각들을 초정밀 필터링합니다.
 * **로직**:
-  - 질문 텍스트 `query`를 SBERT 모델(`jhgan/ko-sroberta-multitask`)로 실시간 로컬 인코딩 처리합니다.
+  - 질문 텍스트 `query`를 Google Gemini API(`gemini-embedding-2` 모델)로 실시간 임베딩 변환하고 쿼리 벡터를 얻습니다.
   - 쿼리 벡터 역시 L2 정규화 처리 후 FAISS의 `index.search()` 함수에 전달하여 Inner Product 거리 기준 탑-K 서치를 수행합니다.
   - 매칭 스코어가 **0.5 이상**인 데이터만 유효 인덱스로 분류하여 수용하고, 이외의 무관 조각들은 전면 제거하여 정보 오염을 원천 차단합니다.
-  - **맥락 보강 (Context Context)**: 검색 적중한 청크(`idx`)의 원문뿐만 아니라, 동일 PDF 문서 내 직전 청크(`idx - 1`) 및 직후 청크(`idx + 1`)까지 3개 청크를 유기적으로 연결하여 AI에 풍부한 전후 맥락 컨텍스트를 제공합니다.
+  - **맥락 보강 (Context Reinforcement)**: 검색 적중한 청크(`idx`)의 원문뿐만 아니라, 동일 PDF 문서 내 직전 청크(`idx - 1`) 및 직후 청크(`idx + 1`)까지 3개 청크를 유기적으로 연결하여 AI에 풍부한 전후 맥락 컨텍스트를 제공합니다.
 
 ---
 
@@ -183,3 +183,35 @@ categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.j
 # 가나다순 오름차순 정렬을 수행하면서 '기타'를 포함하는 항목은 튜플 첫 키 가중치를 1로 주어 맨 뒤로 정렬시킴
 categories = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
 ```
+
+---
+
+## 6. 신규 빌드 및 동기화 자동화 명세 (CLI & Automation Spec)
+
+기존 분석 시스템의 속도 한계 및 동기화 작업 편의성을 극대화하기 위해 다차원 자동화 아키텍처가 도입되었습니다.
+
+### 6.1. Google Gemini API Batch Embedding 버그 수정
+* **버그**: 기존 코드에서 리스트 형식으로 배치 데이터를 전달할 때 SDK가 이를 하나의 거대한 단일 문서로 취급하여 다중 텍스트임에도 1개의 벡터만 생성해 내어 검색 기능이 고장 났었습니다.
+* **패치**: 각 배치 문장을 명시적인 `types.Content` 구조체 리스트로 명시하여 각각의 독립된 임베딩 벡터로 생성되도록 조치했습니다.
+```python
+contents_batch = [types.Content(parts=[types.Part.from_text(text=t)]) for t in batch]
+response = client.models.embed_content(
+    model="gemini-embedding-2",
+    contents=contents_batch
+)
+```
+
+### 6.2. 지능형 폴더 해시(Hash) 스캔 및 변경 감지 알고리즘
+* **목적**: 변경되지 않은 지침서 카테고리를 다시 임베딩하는 등의 불필요한 구글 API 호출 낭비를 영구적으로 차단합니다.
+* **구현**:
+  1. 각 폴더 내부의 모든 PDF 파일의 개수, 명칭, 용량 및 적용 모델명을 종합하여 **MD5 해시 키**를 생성합니다.
+  2. 디스크의 캐시 파일(`.vector_cache.pkl`)의 해시값과 현재 실시간 생성된 해시값을 비교합니다.
+  3. 해시가 동일한 경우 즉시 로딩을 건너뛰고(`변경 없음`), 불일치하는 경우에만 신규 파싱 및 API 임베딩 호출을 진행합니다.
+  4. PDF 파일이 0개인 빈 폴더는 탐색 루프에서 원천 건너뜁니다.
+
+### 6.3. Git Status Porcelain 기반의 Zero-Touch 업로드 자동화 (`sync.bat`)
+* **원리**: 사용자의 별도 입력 없이 더블클릭 한 번으로 변경 사항 탐색부터 클라우드 배포 업로드까지의 흐름을 단일 스레드로 캡슐화합니다.
+* **로직**:
+  1. `build_cache.py`를 호출하여 모든 폴더의 변경 여부 스캔 및 부분 캐시 빌드를 진행합니다.
+  2. 빌드 스크립트 실행이 끝난 후 `git status --porcelain` 명령어를 활용하여 실제 디렉토리에 변경(수정/추가/삭제)된 임베딩 캐시 및 PDF 파일이 존재하는지 모니터링합니다.
+  3. 변경 상태 값이 감지되었을 때만 `git push` 파이프라인을 자동 발동하며, 변경 사항이 없는 경우 네트워크 푸시 요청을 차단하여 자원을 보호합니다.
