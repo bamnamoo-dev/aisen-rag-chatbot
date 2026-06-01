@@ -8,7 +8,21 @@ from dotenv import load_dotenv
 from google.genai import types
 import google.generativeai as legacy_genai
 
-# 분리된 모듈 임포트
+import importlib
+import sys
+
+# 1. 캐시 방지를 위해 모듈 선로드 및 강제 리로드 (Streamlit Cloud 대응)
+import app_config
+import core.parser
+import core.vector_db
+import services.llm_service
+
+importlib.reload(app_config)
+importlib.reload(core.parser)
+importlib.reload(core.vector_db)
+importlib.reload(services.llm_service)
+
+# 2. 필요한 함수/상수 임포트
 from app_config import get_system_prompt, get_category_emoji, GLOBAL_CSS, get_legal_system_prompt
 from core.vector_db import build_vector_db, retrieve_top_chunks
 from services.llm_service import get_genai_client, get_generation_model_name
@@ -337,7 +351,7 @@ if selected_category:
         if unique_chunks:
             context_text = "\n\n".join([f"[{c['metadata']}] (유사도: {c['score']:.4f})\n{c['content_llm']}" for c in unique_chunks])
         else:
-            context_text = "(검색 결과가 존재하지 않습니다. 질문과 일치하거나 유사도가 0.5 이상인 공식 지침서 내용이 전혀 발견되지 않았습니다.)"
+            context_text = "(검색 결과가 존재하지 않습니다. 질문과 일치하거나 유사도가 0.4 이상인 공식 지침서 내용이 전혀 발견되지 않았습니다.)"
 
         # 탭 구분에 따라 로드할 시스템 프롬프트 분기
         if st.session_state.current_tab == "지침서":
