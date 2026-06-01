@@ -1,0 +1,85 @@
+name: 📜 법령 정보 자동 업데이트
+
+on:
+  # 매월 1일 새벽 2시 KST (= UTC 17:00 전날) 자동 실행
+  schedule:
+    - cron: '0 17 1 * *'
+
+  # GitHub Actions 탭에서 수동으로도 실행 가능
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: '수동 실행 사유 (선택)'
+        required: false
+        default: '수동 법령 업데이트'
+
+jobs:
+  update-laws:
+    name: 법령 다운로드 및 벡터 DB 재빌드
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 저장소 체크아웃 (전체 히스토리 포함)
+      - name: ⬇️ 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Python 환경 설정
+      - name: 🐍 Python 3.11 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # 3. 의존성 설치
+      - name: 📦 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. 법령 최신본 다운로드 (legalize-kr GitHub 연동)
+      - name: 📥 법령 최신본 다운로드
+        run: |
+          echo "=== 법령 데이터 다운로드 시작 ==="
+          python legal_downloader.py
+          echo "=== 다운로드 완료 ==="
+
+      # 5. 벡터 DB 재빌드 (조례규칙 카테고리만)
+      - name: 🔄 벡터 DB 재빌드 (조례규칙)
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          echo "=== 벡터 DB 재빌드 시작 ==="
+          python build_cache.py 조례규칙
+          echo "=== 재빌드 완료 ==="
+
+      # 6. 변경사항 확인 후 커밋 & 푸시
+      - name: 📤 변경사항 커밋 및 GitHub 푸시
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 변경사항이 있을 경우에만 커밋
+          if [ -n "$(git status --porcelain)" ]; then
+            git add manuals/조례규칙/
+            git commit -m "🤖 auto: 법령 정보 월간 자동 업데이트 ($(date +'%Y-%m-%d'))"
+            git push origin main
+            echo "✅ 법령 업데이트 완료! Streamlit Cloud가 곧 자동 재배포됩니다."
+          else
+            echo "ℹ️ 변경된 법령 파일이 없습니다. 푸시를 건너뜁니다."
+          fi
+
+      # 7. 실행 결과 요약 (GitHub Actions Summary에 표시)
+      - name: 📊 실행 결과 요약
+        if: always()
+        run: |
+          echo "## 📜 법령 자동 업데이트 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 내용 |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| 실행 시각 | $(date +'%Y년 %m월 %d일 %H:%M') (UTC) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 대상 폴더 | \`manuals/조례규칙/\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 법령 파일 수 | $(ls manuals/조례규칙/*.md 2>/dev/null | wc -l)개 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 캐시 파일 | $(ls -lh manuals/조례규칙/.vector_cache.pkl 2>/dev/null | awk '{print $5}' || echo '없음') |" >> $GITHUB_STEP_SUMMARY
