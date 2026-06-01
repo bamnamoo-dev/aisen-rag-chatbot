@@ -227,12 +227,13 @@ def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name
 
     # 1. 우선순위 파일 식별
     priority_files = get_priority_files(category, manuals_root)
+    search_k = max(50, k * 2)
 
     if index is None or db.embeddings is None or not len(db.embeddings):
         # 키워드 기반 검색 백업
         query_words = query.split()
         scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
-        top_indices = np.argsort(scores)[-k:][::-1]
+        top_indices = np.argsort(scores)[-search_k:][::-1]
         valid_indices = [idx for idx in top_indices if scores[idx] > 0]
         scores_filtered = [float(scores[idx]) for idx in valid_indices]
     else:
@@ -248,7 +249,7 @@ def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name
             query_norm = np.linalg.norm(query_vec, axis=1, keepdims=True)
             normalized_query = query_vec / (query_norm + 1e-10)
             
-            scores, indices = index.search(normalized_query.astype('float32'), k)
+            scores, indices = index.search(normalized_query.astype('float32'), search_k)
             
             scores = scores[0]
             indices = indices[0]
@@ -264,7 +265,7 @@ def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name
             st.warning(f"임베딩 검색 에러로 인해 키워드 백업 검색을 구동합니다: {e}")
             query_words = query.split()
             scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
-            top_indices = np.argsort(scores)[-k:][::-1]
+            top_indices = np.argsort(scores)[-search_k:][::-1]
             valid_indices = [idx for idx in top_indices if scores[idx] > 0]
             scores_filtered = [0.4 for idx in valid_indices] # 백업 기본 유사도 부여
     
@@ -302,4 +303,4 @@ def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name
         
     # 부스팅 스코어 기준으로 재정렬 (Reranking)
     results = sorted(results, key=lambda x: x["score"], reverse=True)
-    return results
+    return results[:k]
