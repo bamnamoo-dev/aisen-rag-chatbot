@@ -50,8 +50,17 @@ class LocalVectorDB:
             if data.get("hash") == current_hash and data.get("chunks"):
                 self.chunks = data["chunks"]
                 self.embeddings = data["embeddings"]
-                self.build_index()
+                # FAISS 인덱스 빌드 실패해도 chunks는 유지 (키워드 검색 폴백으로 동작)
+                try:
+                    self.build_index()
+                except Exception as idx_e:
+                    st.sidebar.warning(f"⚠️ FAISS 인덱스 빌드 실패 (키워드 검색 폴백 활성화): {idx_e}")
+                    self.index = None
                 return True
+            elif not data.get("chunks"):
+                st.sidebar.warning("⚠️ 캐시 파일에 청크 데이터가 없습니다. 재빌드가 필요합니다.")
+            else:
+                st.sidebar.warning(f"⚠️ 캐시 해시 불일치 (파일 변경 감지). 재빌드가 필요합니다.")
         except Exception as e:
             st.sidebar.warning(f"캐시 로드 실패: {e}")
         return False

@@ -5,6 +5,4 @@ python-dotenv
 pymupdf
 numpy
 scikit-learn
-sentence-transformers
-torch
 faiss-cpu
