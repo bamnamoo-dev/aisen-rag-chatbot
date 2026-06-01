@@ -514,9 +514,9 @@ else:
             </p>
             <div style="display: flex; justify-content: center; gap: 16px; margin-top: 30px;">
                 <div style="background: white; border: 1px solid #f1f5f9; padding: 24px; border-radius: 20px; width: 240px; text-align: left; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.04); transition: all 0.25s ease;">
-                    <div style="font-size: 1.8rem; margin-bottom: 12px;">🔒</div>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 6px;">100% 로컬 보안</div>
-                    <div style="color: #475569; font-size: 0.82rem; margin-top: 4px; line-height: 1.55; letter-spacing: -0.01em;">지침서 원문 전체가 외부 클라우드나 공용 서버에 절대 노출되지 않아 완벽히 보호됩니다.</div>
+                    <div style="font-size: 1.8rem; margin-bottom: 12px;">☁️</div>
+                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 6px;">클라우드 인프라 최적화</div>
+                    <div style="color: #475569; font-size: 0.82rem; margin-top: 4px; line-height: 1.55; letter-spacing: -0.01em;">외부 유출 우려가 없는 공개 행정 지침 데이터의 특성을 활용, 로컬 FAISS 인덱싱 기술과 구글 Gemini API의 연산력을 결합한 고속·고효율 하이브리드 구조</div>
                 </div>
                 <div style="background: white; border: 1px solid #f1f5f9; padding: 24px; border-radius: 20px; width: 240px; text-align: left; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.04); transition: all 0.25s ease;">
                     <div style="font-size: 1.8rem; margin-bottom: 12px;">⚡</div>
