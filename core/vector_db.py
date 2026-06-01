@@ -179,14 +179,54 @@ def build_vector_db(category, manuals_root, admin_mode, client, model_name="gemi
         
     return db
 
-def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name="gemini-embedding-2"):
-    """질문과 관련 있는 지침 조각을 FAISS로 검색하고 유사도 임계치 필터링 및 맥락 보강"""
+def get_priority_files(category, manuals_root="manuals"):
+    """우선순위 지침서/법령 파일 목록 조회 (키워드 매칭 및 가장 최근 수정된 파일)"""
+    cat_path = os.path.join(manuals_root, category)
+    if not os.path.exists(cat_path):
+        return set()
+        
+    priority_files = set()
+    try:
+        files = [f for f in os.listdir(cat_path) if f.lower().endswith(('.pdf', '.md'))]
+    except Exception:
+        return set()
+        
+    latest_file = None
+    latest_mtime = -1
+    
+    for f in files:
+        f_path = os.path.join(cat_path, f)
+        f_lower = f.lower()
+        
+        # 1. 파일명 키워드 검사 (2026, 최신, _new)
+        if "(2026)" in f_lower or "2026" in f_lower or "(최신)" in f_lower or "최신" in f_lower or "_new" in f_lower:
+            priority_files.add(f)
+            
+        # 2. 파일 수정 시간(mtime) 검사
+        try:
+            mtime = os.path.getmtime(f_path)
+            if mtime > latest_mtime:
+                latest_mtime = mtime
+                latest_file = f
+        except Exception:
+            pass
+            
+    if latest_file:
+        priority_files.add(latest_file)
+        
+    return priority_files
+
+def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name="gemini-embedding-2", manuals_root="manuals"):
+    """질문과 관련 있는 지침 조각을 FAISS로 검색하고 유사도 임계치 필터링, 최신 파일 가중치(Boosting) 부여, 맥락 보강 및 Reranking"""
     if category not in st.session_state.vector_db:
         return []
     
     db = st.session_state.vector_db[category]
     chunks = db.chunks
     index = db.index
+
+    # 1. 우선순위 파일 식별
+    priority_files = get_priority_files(category, manuals_root)
 
     if index is None or db.embeddings is None or not len(db.embeddings):
         # 키워드 기반 검색 백업
@@ -238,10 +278,28 @@ def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name
             prefix = "▶ " if i == idx else "  "
             context_text += f"{prefix}{chunks[i]['content']}\n"
             
+        metadata = chunks[idx]["metadata"]
+        
+        # 최신 지침 가중치 룰 (Score Boosting) 적용
+        is_priority = False
+        for p_file in priority_files:
+            if metadata.startswith(p_file):
+                is_priority = True
+                break
+                
+        final_score = score
+        if is_priority:
+            final_score += 0.1  # 보너스 점수 +0.1 부여
+            
         results.append({
             "content_llm": chunks[idx]["content"].strip(),
             "content_ui": context_text.strip(),
-            "metadata": chunks[idx]["metadata"],
-            "score": score
+            "metadata": metadata,
+            "score": final_score,
+            "original_score": score,
+            "is_priority": is_priority
         })
+        
+    # 부스팅 스코어 기준으로 재정렬 (Reranking)
+    results = sorted(results, key=lambda x: x["score"], reverse=True)
     return results

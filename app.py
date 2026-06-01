@@ -308,9 +308,9 @@ if selected_category:
         with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
             st.write("🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중..." if st.session_state.current_tab == "지침서" else "🛰️ 1. 로컬 법령 벡터 DB에서 관련 조항 탐색 중...")
             time.sleep(0.3)
-            relevant_chunks = retrieve_top_chunks(prompt, selected_category, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+            relevant_chunks = retrieve_top_chunks(prompt, selected_category, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME, manuals_root=manuals_root)
             
-            st.write(f"📊 2. 유사도 기준 필터링 완료 (유사도 0.5 이상 선별된 청크 수: {len(relevant_chunks)}개)")
+            st.write(f"📊 2. 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개)")
             time.sleep(0.2)
             
             st.write("🤖 3. AI-SENSE 스마트 엔진이 답변을 작성하고 있습니다...")
