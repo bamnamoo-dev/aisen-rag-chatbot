@@ -218,6 +218,11 @@ else:
             st.markdown("<div style='font-size:0.8rem; color:#64748b;'>검색 가능한 조례/규칙 파일이 로컬 폴더에 없습니다.</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+# 사이드바 상태 컨테이너 및 면책 조항 정의
+sidebar_stats_container = st.sidebar.container()
+st.sidebar.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+st.sidebar.caption("💡 **안내 및 면책 조항**: 본 서비스는 교육행정 업무 편의를 위한 AI 보조 도구이며 생성된 답변은 법적 효력이 없습니다. 중요 처리는 반드시 공식 공문 및 최종 발행된 법령 원문을 재확인하시기 바랍니다.")
+
 # 메인 렌더링
 selected_category = st.session_state.selected_category
 
@@ -245,10 +250,10 @@ if selected_category:
         """, unsafe_allow_html=True)
         st.stop()
         
-    st.sidebar.success(f"✅ {len(db_stats.chunks)}개 문단 분석 완료")
+    sidebar_stats_container.success(f"✅ {len(db_stats.chunks)}개 문단 분석 완료")
     selected_model_name = get_generation_model_name(client)
-    st.sidebar.info(f"🚀 AI 엔진: **{selected_model_name.split('/')[-1] if selected_model_name else '자동'}**")
-    st.sidebar.divider()
+    sidebar_stats_container.info(f"🚀 AI 엔진: **{selected_model_name.split('/')[-1] if selected_model_name else '자동'}**")
+    sidebar_stats_container.divider()
 
     # 헤더 렌더링 분기
     if st.session_state.current_tab == "지침서":
