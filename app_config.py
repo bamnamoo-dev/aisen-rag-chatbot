@@ -110,10 +110,13 @@ GLOBAL_CSS = """
         text-transform: uppercase !important;
     }
     
-    /* 사이드바 컨테이너 스타일 (완전 화이트 & 연한 회색 보더) */
+    /* 사이드바 컨테이너 스타일 (완전 화이트 & 연한 회색 보더 & 상단 여백 축소) */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #f1f5f9 !important;
+    }
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 1.5rem !important;
     }
     
     /* 사이드바 내부의 모든 버튼 및 내부 자식 요소 강제 좌측 정렬 */

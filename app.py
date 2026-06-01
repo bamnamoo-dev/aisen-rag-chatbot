@@ -104,7 +104,7 @@ st.set_page_config(page_title="AI-SENSE SMART RAG", page_icon="🏛️", layout=
 # 사이드바 헤더 및 CSS
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 st.sidebar.markdown("""
-    <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; margin-bottom: 25px; border-bottom: 1px solid #f1f5f9;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 0; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
         <div style="background-color: #1e60ff; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.25rem; box-shadow: 0 4px 10px rgba(30, 96, 255, 0.25);">I</div>
         <div>
             <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; line-height: 1.1;">아이센스토어</div>
@@ -114,7 +114,7 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # 2-Tab 네비게이션 상단 배치
-st.sidebar.markdown("<div style='margin-bottom: 15px;'>", unsafe_allow_html=True)
+st.sidebar.markdown("<div style='margin-bottom: 5px;'>", unsafe_allow_html=True)
 tab_col1, tab_col2 = st.sidebar.columns(2)
 with tab_col1:
     is_guidelines = st.session_state.current_tab == "지침서"
