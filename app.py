@@ -35,12 +35,9 @@ if not api_key:
     st.error("GOOGLE_API_KEY가 .env 파일에 설정되어 있지 않습니다.")
     st.stop()
 
-# 세션 상태에 admin_mode 초기화 및 URL 파라미터 확인 (?mode=admin)
+# 세션 상태에 admin_mode 초기화
 if "admin_mode" not in st.session_state:
     st.session_state.admin_mode = False
-
-if st.query_params.get("mode") == "admin":
-    st.session_state.admin_mode = True
 
 admin_mode = st.session_state.admin_mode
 
@@ -240,7 +237,27 @@ else:
 
 # 사이드바 상태 컨테이너 및 면책 조항 정의
 sidebar_stats_container = st.sidebar.container()
-st.sidebar.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+
+# 관리자 로그인/로그아웃 섹션
+st.sidebar.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+if not st.session_state.admin_mode:
+    with st.sidebar.expander("🔑 관리자 로그인", expanded=False):
+        admin_pw_input = st.text_input("비밀번호 입력", type="password", key="admin_pw_input")
+        if st.button("로그인", use_container_width=True):
+            correct_pw = os.getenv("ADMIN_PASSWORD", "@@admin1601")
+            if admin_pw_input == correct_pw:
+                st.session_state.admin_mode = True
+                st.sidebar.success("관리자 인증 성공!")
+                time.sleep(0.5)
+                st.rerun()
+            else:
+                st.error("비밀번호 불일치")
+else:
+    if st.sidebar.button("🔒 관리자 로그아웃", use_container_width=True):
+        st.session_state.admin_mode = False
+        st.rerun()
+
+st.sidebar.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 st.sidebar.caption("💡 **안내 및 면책 조항**: 본 서비스는 교육행정 업무 편의를 위한 AI 보조 도구이며 생성된 답변은 법적 효력이 없습니다. 중요 처리는 반드시 공식 공문 및 최종 발행된 법령 원문을 재확인하시기 바랍니다.")
 
 # 메인 렌더링
