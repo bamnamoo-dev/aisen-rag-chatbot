@@ -28,40 +28,51 @@ def get_pdf_chunks_cli(folder_path):
     if not os.path.exists(folder_path):
         return chunks
     
-    pdf_files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith('.pdf')])
+    files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('.pdf', '.md'))])
     splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=80)
     
-    total_files = len(pdf_files)
-    print(f"\n[1/2] 📄 PDF 파일 파싱을 시작합니다. (총 {total_files}개 파일)")
+    total_files = len(files)
+    print(f"\n[1/2] 📄 문서 파일 파싱을 시작합니다. (총 {total_files}개 파일)")
     
-    for f_idx, filename in enumerate(pdf_files):
+    for f_idx, filename in enumerate(files):
         file_path = os.path.join(folder_path, filename)
         print(f"   -> [{f_idx+1}/{total_files}] 분석 중: {filename}")
         try:
-            doc = fitz.open(file_path)
-            for page_num, page in enumerate(doc, 1):
-                text = page.get_text().strip()
-                try:
-                    tables = page.find_tables()
-                    table_texts = []
-                    for tab in tables:
-                        tab_data = tab.extract()
-                        md = table_to_markdown(tab_data)
-                        if md:
-                            table_texts.append(md)
-                    if table_texts:
-                        text += "\n\n[표 데이터]\n" + "\n\n".join(table_texts)
-                except Exception:
-                    pass
-                
+            if filename.lower().endswith('.pdf'):
+                doc = fitz.open(file_path)
+                for page_num, page in enumerate(doc, 1):
+                    text = page.get_text().strip()
+                    try:
+                        tables = page.find_tables()
+                        table_texts = []
+                        for tab in tables:
+                            tab_data = tab.extract()
+                            md = table_to_markdown(tab_data)
+                            if md:
+                                table_texts.append(md)
+                        if table_texts:
+                            text += "\n\n[표 데이터]\n" + "\n\n".join(table_texts)
+                    except Exception:
+                        pass
+                    
+                    if text:
+                        page_chunks = splitter.split_text(text)
+                        for c_idx, c_text in enumerate(page_chunks):
+                            chunks.append({
+                                "content": c_text.strip(),
+                                "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
+                            })
+                doc.close()
+            elif filename.lower().endswith('.md'):
+                with open(file_path, "r", encoding="utf-8") as f:
+                    text = f.read().strip()
                 if text:
                     page_chunks = splitter.split_text(text)
                     for c_idx, c_text in enumerate(page_chunks):
                         chunks.append({
                             "content": c_text.strip(),
-                            "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
+                            "metadata": f"{filename} - (분할 {c_idx+1})"
                         })
-            doc.close()
         except Exception as e:
             print(f"   ❌ {filename} 로드 실패: {e}")
             
@@ -125,9 +136,9 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
 def build_category_cache(category, manuals_root, client, model_name):
     cat_path = os.path.join(manuals_root, category)
     
-    # PDF 파일이 아예 없는 폴더는 스캔 대상에서 제외 (불필요한 빌드 방지)
-    pdf_files = [f for f in os.listdir(cat_path) if f.lower().endswith('.pdf')]
-    if not pdf_files:
+    # PDF 또는 MD 파일이 아예 없는 폴더는 스캔 대상에서 제외 (불필요한 빌드 방지)
+    files = [f for f in os.listdir(cat_path) if f.lower().endswith(('.pdf', '.md'))]
+    if not files:
         return False
         
     current_hash = get_folder_hash(cat_path, model_name)

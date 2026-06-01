@@ -2,12 +2,14 @@ import streamlit as st
 import os
 import re
 import time
+import urllib.request
+import urllib.parse
 from dotenv import load_dotenv
 from google.genai import types
 import google.generativeai as legacy_genai
 
 # 분리된 모듈 임포트
-from config import get_system_prompt, get_category_emoji, GLOBAL_CSS
+from config import get_system_prompt, get_category_emoji, GLOBAL_CSS, get_legal_system_prompt
 from core.vector_db import build_vector_db, retrieve_top_chunks
 from services.llm_service import get_genai_client, get_generation_model_name
 
@@ -25,13 +27,47 @@ admin_mode = os.getenv("ADMIN_MODE", "False").lower() == "true"
 client = get_genai_client(api_key)
 LOCAL_MODEL_NAME = "gemini-embedding-2"
 
+# 실시간 법령 조회 도구 함수 정의 (Gemini가 필요 시 자동 호출)
+def get_korean_law_article(law_name: str, file_type: str = "법률") -> str:
+    """대한민국 법령(법률, 시행령, 시행규칙)의 최신 원문을 국문으로 실시간 조회합니다.
+    
+    Args:
+        law_name: 조회하고자 하는 법령명 (예: '지방공무원법', '지방자치단체 입찰 및 계약 집행기준')
+        file_type: 법령의 종류로 '법률', '시행령', '시행규칙' 중 하나 (기본값: '법률')
+    """
+    clean_law_name = law_name.replace(" ", "")
+    if "지방계약법" in clean_law_name:
+        clean_law_name = "지방자치단체를당사자로하는계약에관한법률"
+        
+    encoded_law = urllib.parse.quote(clean_law_name)
+    encoded_file_type = urllib.parse.quote(f"{file_type}.md")
+    raw_url = f"https://raw.githubusercontent.com/legalize-kr/legalize-kr/main/kr/{encoded_law}/{encoded_file_type}"
+    
+    try:
+        req = urllib.request.Request(raw_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            markdown_content = response.read().decode('utf-8')
+        result = markdown_content[:50000]
+        st.session_state.last_fetched_law = {
+            "law_name": law_name,
+            "file_type": file_type,
+            "content": result
+        }
+        return result
+    except Exception as e:
+        return f"❌ 법령 '{law_name}' ({file_type}) 원문을 가져오는데 실패했습니다: {e}"
+
 # 세션 콜백
 def set_pending_prompt(prompt_text):
     st.session_state.pending_prompt = prompt_text
 
 # 세션 초기화
+if "current_tab" not in st.session_state:
+    st.session_state.current_tab = "지침서"
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "legal_messages" not in st.session_state:
+    st.session_state.legal_messages = []
 if "selected_category" not in st.session_state:
     st.session_state.selected_category = None
 if "vector_db" not in st.session_state:
@@ -59,6 +95,25 @@ st.sidebar.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# 2-Tab 네비게이션 상단 배치
+st.sidebar.markdown("<div style='margin-bottom: 15px;'>", unsafe_allow_html=True)
+tab_col1, tab_col2 = st.sidebar.columns(2)
+with tab_col1:
+    is_guidelines = st.session_state.current_tab == "지침서"
+    btn_type = "primary" if is_guidelines else "secondary"
+    if st.button("📋 지침/매뉴얼", key="tab_guidelines", use_container_width=True, type=btn_type):
+        st.session_state.current_tab = "지침서"
+        st.session_state.selected_category = None
+        st.rerun()
+with tab_col2:
+    is_laws = st.session_state.current_tab == "법령"
+    btn_type = "primary" if is_laws else "secondary"
+    if st.button("⚖️ 법령/조례", key="tab_laws", use_container_width=True, type=btn_type):
+        st.session_state.current_tab = "법령"
+        st.session_state.selected_category = "조례규칙"
+        st.rerun()
+st.sidebar.markdown("</div>", unsafe_allow_html=True)
+
 if admin_mode:
     st.sidebar.markdown("""
         <div style="background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(225, 29, 72, 0.03);">
@@ -82,57 +137,86 @@ if admin_mode:
                     st.sidebar.error(f"캐시 파일 삭제 실패: {e}")
             st.rerun()
 
-
-st.sidebar.markdown("""
-    <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; padding-left: 4px;">ACTIVE CHANNELS</div>
-""", unsafe_allow_html=True)
-
-if not os.path.exists(manuals_root):
-    st.sidebar.error("manuals 폴더가 없습니다.")
-    st.stop()
-
-# 정렬된 카테고리 로딩
-categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d))]
-categories = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
-
-# 사이드바 - 카테고리 버튼 생성
-for cat in categories:
-    is_active = st.session_state.selected_category == cat
-    emoji = get_category_emoji(cat)
-    btn_label = f"{emoji} {cat}"
+if st.session_state.current_tab == "지침서":
+    st.sidebar.markdown("""
+        <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; padding-left: 4px;">ACTIVE CHANNELS</div>
+    """, unsafe_allow_html=True)
     
-    container_class = "active-card-container" if is_active else "inactive-card-container"
-    st.sidebar.markdown(f"<div class='{container_class}'>", unsafe_allow_html=True)
-    clicked = st.sidebar.button(btn_label, key=f"btn_{cat}", use_container_width=True)
-    st.sidebar.markdown("</div>", unsafe_allow_html=True)
+    if not os.path.exists(manuals_root):
+        st.sidebar.error("manuals 폴더가 없습니다.")
+        st.stop()
+        
+    # 정렬된 카테고리 로딩 (조례규칙 카테고리는 Tab 2 전용이므로 제외)
+    categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d != "조례규칙"]
+    categories = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
     
-    if clicked:
-        if st.session_state.selected_category == cat:
-            st.session_state.selected_category = None
+    # 사이드바 - 카테고리 버튼 생성
+    for cat in categories:
+        is_active = st.session_state.selected_category == cat
+        emoji = get_category_emoji(cat)
+        btn_label = f"{emoji} {cat}"
+        
+        container_class = "active-card-container" if is_active else "inactive-card-container"
+        st.sidebar.markdown(f"<div class='{container_class}'>", unsafe_allow_html=True)
+        clicked = st.sidebar.button(btn_label, key=f"btn_{cat}", use_container_width=True)
+        st.sidebar.markdown("</div>", unsafe_allow_html=True)
+        
+        if clicked:
+            if st.session_state.selected_category == cat:
+                st.session_state.selected_category = None
+            else:
+                st.session_state.selected_category = cat
+                st.session_state.messages = []
+                if "chat" in st.session_state: del st.session_state.chat
+            st.rerun()
+                
+        if is_active:
+            cat_path = os.path.join(manuals_root, cat)
+            files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith('.pdf')])
+            with st.sidebar.container():
+                st.markdown("<div class='file-container'>", unsafe_allow_html=True)
+                if files:
+                    st.markdown("<div style='font-size:0.85rem; font-weight:600; margin-bottom:8px;'>📄 지침서 다운로드</div>", unsafe_allow_html=True)
+                    for f in files:
+                        f_path = os.path.join(cat_path, f)
+                        display_name = f[:-4] if f.lower().endswith('.pdf') else f
+                        st.download_button(
+                            label=f"⬇️ {display_name}", 
+                            data=get_file_binary(f_path), 
+                            file_name=f, 
+                            key=f"dl_{f}", 
+                            use_container_width=True
+                        )
+                st.markdown("</div>", unsafe_allow_html=True)
+else:
+    # 법령/조례 모드 사이드바 표시
+    st.sidebar.markdown("""
+        <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; padding-left: 4px;">ACTIVE LAWS</div>
+    """, unsafe_allow_html=True)
+    
+    cat_path = os.path.join(manuals_root, "조례규칙")
+    files = []
+    if os.path.exists(cat_path):
+        files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith(('.pdf', '.md'))])
+        
+    with st.sidebar.container():
+        st.markdown("<div class='file-container'>", unsafe_allow_html=True)
+        if files:
+            st.markdown("<div style='font-size:0.85rem; font-weight:600; margin-bottom:8px;'>⚖️ 검색 가능한 핵심 법령/조례</div>", unsafe_allow_html=True)
+            for f in files:
+                f_path = os.path.join(cat_path, f)
+                display_name = f[:-3] if f.lower().endswith('.md') else f
+                display_name = display_name[:-4] if display_name.lower().endswith('.pdf') else display_name
+                st.download_button(
+                    label=f"⬇️ {display_name}", 
+                    data=get_file_binary(f_path), 
+                    file_name=f, 
+                    key=f"dl_law_{f}", 
+                    use_container_width=True
+                )
         else:
-            st.session_state.selected_category = cat
-            st.session_state.messages = []
-            if "chat" in st.session_state: del st.session_state.chat
-        st.rerun()
-            
-    if is_active:
-        cat_path = os.path.join(manuals_root, cat)
-        files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith('.pdf')])
-        with st.sidebar.container():
-            st.markdown("<div class='file-container'>", unsafe_allow_html=True)
-            if files:
-                st.markdown("<div style='font-size:0.85rem; font-weight:600; margin-bottom:8px;'>📄 지침서 다운로드</div>", unsafe_allow_html=True)
-                for f in files:
-                    f_path = os.path.join(cat_path, f)
-                    display_name = f[:-4] if f.lower().endswith('.pdf') else f
-                    st.download_button(
-                        label=f"⬇️ {display_name}", 
-                        data=get_file_binary(f_path), 
-                        file_name=f, 
-                        key=f"dl_{f}", 
-                        use_container_width=True
-                    )
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("<div style='font-size:0.8rem; color:#64748b;'>검색 가능한 조례/규칙 파일이 로컬 폴더에 없습니다.</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # 메인 렌더링
 selected_category = st.session_state.selected_category
@@ -166,34 +250,63 @@ if selected_category:
     st.sidebar.info(f"🚀 AI 엔진: **{selected_model_name.split('/')[-1] if selected_model_name else '자동'}**")
     st.sidebar.divider()
 
-    st.markdown(f"""
-        <div style="padding: 10px 0 20px 0; border-bottom: 1px solid #f1f5f9; margin-bottom: 30px;">
-            <div class="header-pill">LIVE RAG ENGINE SYSTEM</div>
-            <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 6px; letter-spacing: -0.02em;">{selected_category}</h1>
-            <div style="color: #64748b; font-size: 0.95rem; font-weight: 500;">
-                행정지원과의 공식 지침서 분석 및 실시간 답변을 제공합니다.
+    # 헤더 렌더링 분기
+    if st.session_state.current_tab == "지침서":
+        st.markdown(f"""
+            <div style="padding: 10px 0 20px 0; border-bottom: 1px solid #f1f5f9; margin-bottom: 30px;">
+                <div class="header-pill">LIVE RAG ENGINE SYSTEM</div>
+                <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 6px; letter-spacing: -0.02em;">{selected_category}</h1>
+                <div style="color: #64748b; font-size: 0.95rem; font-weight: 500;">
+                    행정지원과의 공식 지침서 분석 및 실시간 답변을 제공합니다.
+                </div>
             </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            <div style="padding: 10px 0 20px 0; border-bottom: 1px solid #f1f5f9; margin-bottom: 30px;">
+                <div class="header-pill" style="background-color: #f0fdf4 !important; color: #16a34a !important;">LEGAL SEARCH ENGINE</div>
+                <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 6px; letter-spacing: -0.02em;">⚖️ 교육행정 법령 및 조례 검색</h1>
+                <div style="color: #64748b; font-size: 0.95rem; font-weight: 500;">
+                    학교 행정과 밀접한 핵심 상위 법령 및 서울시교육청 조례 규칙 원문 검색을 지원합니다.
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
-    for message in st.session_state.messages:
+    # 선택된 탭에 따른 대화 기록 로드
+    chat_history = st.session_state.messages if st.session_state.current_tab == "지침서" else st.session_state.legal_messages
+
+    for message in chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            # 도구 호출을 통해 실시간으로 가져온 법령 팝오버 표시 (지침서 탭 전용)
+            if st.session_state.current_tab == "지침서" and message.get("fetched_law"):
+                law_data = message["fetched_law"]
+                with st.popover(f"💡 {law_data['law_name']} ({law_data['file_type']}) 원문 보기", use_container_width=True):
+                    st.markdown(f"### {law_data['law_name']} ({law_data['file_type']})")
+                    st.markdown(f"<div style='background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.85rem; border: 1px solid #e2e8f0; max-height: 400px; overflow-y: auto;'>{law_data['content']}</div>", unsafe_allow_html=True)
 
     prompt = None
     if "pending_prompt" in st.session_state:
         prompt = st.session_state.pending_prompt
         del st.session_state.pending_prompt
     else:
-        prompt = st.chat_input(f"{selected_category} 업무에 대해 질문해 주세요.")
+        input_placeholder = f"{selected_category} 업무에 대해 질문해 주세요." if st.session_state.current_tab == "지침서" else "궁금하신 서울시교육청 관련 조례 및 법령에 대해 질문해 주세요. (예: 공무원 복무 조례상 특별휴가)"
+        prompt = st.chat_input(input_placeholder)
 
     if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        # 실시간 법령 조회 캐시 초기화
+        st.session_state.last_fetched_law = None
+        
+        if st.session_state.current_tab == "지침서":
+            st.session_state.messages.append({"role": "user", "content": prompt})
+        else:
+            st.session_state.legal_messages.append({"role": "user", "content": prompt})
+            
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
-            st.write("🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중...")
+            st.write("🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중..." if st.session_state.current_tab == "지침서" else "🛰️ 1. 로컬 법령 벡터 DB에서 관련 조항 탐색 중...")
             time.sleep(0.3)
             relevant_chunks = retrieve_top_chunks(prompt, selected_category, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
             
@@ -221,7 +334,11 @@ if selected_category:
         else:
             context_text = "(검색 결과가 존재하지 않습니다. 질문과 일치하거나 유사도가 0.5 이상인 공식 지침서 내용이 전혀 발견되지 않았습니다.)"
 
-        system_prompt = get_system_prompt(selected_category, context_text)
+        # 탭 구분에 따라 로드할 시스템 프롬프트 분기
+        if st.session_state.current_tab == "지침서":
+            system_prompt = get_system_prompt(selected_category, context_text)
+        else:
+            system_prompt = get_legal_system_prompt(selected_category, context_text)
 
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
@@ -229,7 +346,8 @@ if selected_category:
             errors = []
             
             history = []
-            raw_history = st.session_state.messages[-5:-1] if len(st.session_state.messages) >= 5 else st.session_state.messages[:-1]
+            target_history = st.session_state.messages if st.session_state.current_tab == "지침서" else st.session_state.legal_messages
+            raw_history = target_history[-5:-1] if len(target_history) >= 5 else target_history[:-1]
             if len(raw_history) % 2 != 0: raw_history = raw_history[1:]
                 
             for m in raw_history:
@@ -243,13 +361,17 @@ if selected_category:
                     if not gen_model: break
                     
                     try:
+                        # 탭 1인 경우에만 실시간 법령 조회 도구 활성화
+                        tools_config = [get_korean_law_article] if st.session_state.current_tab == "지침서" else None
+                        
                         response_stream = client.models.generate_content_stream(
                             model=gen_model,
                             contents=history + [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
                             config=types.GenerateContentConfig(
                                 system_instruction=system_prompt,
                                 temperature=0.3,
-                                max_output_tokens=2048
+                                max_output_tokens=2048,
+                                tools=tools_config
                             )
                         )
                         def stream_generator():
@@ -295,16 +417,37 @@ if selected_category:
                 
                 if unique_chunks:
                     st.markdown("---")
-                    st.markdown("<div style='font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 5px;'>📍 참고 지침 원문 확인</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 5px;'>📍 참고 지침 원문 확인</div>" if st.session_state.current_tab == "지침서" else "<div style='font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 5px;'>📍 참고 법령/조례 원문 확인</div>", unsafe_allow_html=True)
                     cols = st.columns(min(len(unique_chunks), 5))
                     for idx, chunk in enumerate(unique_chunks):
                         with cols[idx % 5]:
                             with st.popover(f"📄 {chunk['metadata'][:12]}...", use_container_width=True):
                                 st.markdown(f"**[{chunk['metadata']}] 원문 (유사도: {chunk['score']:.4f})**")
                                 st.markdown(f"<div style='background: #f8fafc; padding: 10px; border-radius: 5px; font-size: 0.85rem; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto;'>{chunk['content_ui']}</div>", unsafe_allow_html=True)
-                                st.markdown("<div style='font-size: 0.7rem; color: #94a3b8; margin-top: 5px;'>※ 위 내용은 지침서에서 추출된 원문입니다.</div>", unsafe_allow_html=True)
+                                st.markdown("<div style='font-size: 0.7rem; color: #94a3b8; margin-top: 5px;'>※ 위 내용은 추출된 원문입니다.</div>", unsafe_allow_html=True)
 
-                st.session_state.messages.append({"role": "assistant", "content": main_response})
+                # 지침서 탭에서 실시간으로 도구가 실행된 경우 팝오버 배지 렌더링
+                fetched_law = None
+                if st.session_state.current_tab == "지침서" and st.session_state.get("last_fetched_law"):
+                    fetched_law = st.session_state.last_fetched_law
+                    st.markdown("---")
+                    st.markdown("<div style='font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 5px;'>⚖️ 상위 근거 법령 원문 확인</div>", unsafe_allow_html=True)
+                    with st.popover(f"💡 {fetched_law['law_name']} ({fetched_law['file_type']}) 원문 보기", use_container_width=True):
+                        st.markdown(f"### {fetched_law['law_name']} ({fetched_law['file_type']})")
+                        st.markdown(f"<div style='background: #f8fafc; padding: 12px; border-radius: 8px; font-size: 0.85rem; border: 1px solid #e2e8f0; max-height: 400px; overflow-y: auto;'>{fetched_law['content']}</div>", unsafe_allow_html=True)
+
+                # 대화 저장
+                if st.session_state.current_tab == "지침서":
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": main_response,
+                        "fetched_law": fetched_law
+                    })
+                else:
+                    st.session_state.legal_messages.append({
+                        "role": "assistant", 
+                        "content": main_response
+                    })
                 
                 if recommendations:
                     st.markdown("<br>", unsafe_allow_html=True)
@@ -313,12 +456,13 @@ if selected_category:
                     for idx, rec in enumerate(recommendations):
                         with rec_cols[idx]:
                             st.markdown("<div class='rec-btn-container'>", unsafe_allow_html=True)
-                            st.button(f"🔍 {rec}", key=f"rec_{idx}_{len(st.session_state.messages)}", on_click=set_pending_prompt, args=(rec,))
+                            st.button(f"🔍 {rec}", key=f"rec_{idx}_{st.session_state.current_tab}_{len(chat_history)}", on_click=set_pending_prompt, args=(rec,))
                             st.markdown("</div>", unsafe_allow_html=True)
                 
             except Exception as e:
                 st.error(f"오류가 발생했습니다: {e}")
 else:
+    # 지침서 기본 랜딩 페이지
     st.markdown("""
         <div style="padding: 80px 0; text-align: center; max-width: 800px; margin: 0 auto;">
             <div style="background-color: #eff6ff; color: #1e60ff; width: 80px; height: 80px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 24px auto; box-shadow: 0 10px 25px rgba(30, 96, 255, 0.15);">🏛️</div>

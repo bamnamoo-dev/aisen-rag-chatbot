@@ -128,60 +128,77 @@ def table_to_markdown(table_data):
 
 
 def get_pdf_chunks(folder_path):
-    """PDF 파일을 페이지 단위로 불러와 의미 단위 분할(Recursive Split) 및 표 데이터 보존하여 추출"""
+    """PDF 또는 MD 파일을 불러와 의미 단위 분할(Recursive Split)하여 추출"""
     chunks = []
     if not os.path.exists(folder_path):
         return chunks
     
-    pdf_files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith('.pdf')])
+    files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('.pdf', '.md'))])
     splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=80)
     
     # 분석 시 시각화 요소 도입
     progress_bar = st.progress(0)
     status_text = st.empty()
     
-    total_files = len(pdf_files)
-    for f_idx, filename in enumerate(pdf_files):
+    total_files = len(files)
+    if total_files == 0:
+        status_text.empty()
+        progress_bar.empty()
+        return chunks
+        
+    for f_idx, filename in enumerate(files):
         file_path = os.path.join(folder_path, filename)
-        status_text.markdown(f"📄 **PDF 분석 중 ({f_idx+1}/{total_files}):** `{filename}`")
+        status_text.markdown(f"📄 **문서 분석 중 ({f_idx+1}/{total_files}):** `{filename}`")
         try:
-            doc = fitz.open(file_path)
-            for page_num, page in enumerate(doc, 1):
-                # 1. 일반 텍스트 추출
-                text = page.get_text().strip()
-                
-                # 2. 표 데이터 추출 및 마크다운 보존
-                try:
-                    tables = page.find_tables()
-                    table_texts = []
-                    for tab in tables:
-                        tab_data = tab.extract()
-                        md = table_to_markdown(tab_data)
-                        if md:
-                            table_texts.append(md)
-                    if table_texts:
-                        text += "\n\n[표 데이터]\n" + "\n\n".join(table_texts)
-                except Exception:
-                    pass
-                
+            if filename.lower().endswith('.pdf'):
+                doc = fitz.open(file_path)
+                for page_num, page in enumerate(doc, 1):
+                    # 1. 일반 텍스트 추출
+                    text = page.get_text().strip()
+                    
+                    # 2. 표 데이터 추출 및 마크다운 보존
+                    try:
+                        tables = page.find_tables()
+                        table_texts = []
+                        for tab in tables:
+                            tab_data = tab.extract()
+                            md = table_to_markdown(tab_data)
+                            if md:
+                                table_texts.append(md)
+                        if table_texts:
+                            text += "\n\n[표 데이터]\n" + "\n\n".join(table_texts)
+                    except Exception:
+                        pass
+                    
+                    if text:
+                        page_chunks = splitter.split_text(text)
+                        for c_idx, c_text in enumerate(page_chunks):
+                            content_stripped = c_text.strip()
+                            # 무의미하게 표 기호(|)와 공백만 가득한 청크 필터링
+                            non_ws = "".join(content_stripped.split())
+                            if non_ws:
+                                table_char_count = non_ws.count('|') + non_ws.count('-')
+                                letters_count = len([char for char in non_ws if char.isalnum()])
+                                # 청크의 50% 이상이 표 기호이고, 실제 한글/영어/숫자 글자수가 15자 미만이면 무시
+                                if len(non_ws) > 0 and (table_char_count / len(non_ws) > 0.5) and letters_count < 15:
+                                    continue
+                                    
+                            chunks.append({
+                                "content": content_stripped,
+                                "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
+                            })
+                doc.close()
+            elif filename.lower().endswith('.md'):
+                with open(file_path, "r", encoding="utf-8") as f:
+                    text = f.read().strip()
                 if text:
                     page_chunks = splitter.split_text(text)
                     for c_idx, c_text in enumerate(page_chunks):
                         content_stripped = c_text.strip()
-                        # 무의미하게 표 기호(|)와 공백만 가득한 청크 필터링 (글자 수가 너무 적은 경우 제외)
-                        non_ws = "".join(content_stripped.split())
-                        if non_ws:
-                            table_char_count = non_ws.count('|') + non_ws.count('-')
-                            letters_count = len([char for char in non_ws if char.isalnum()])
-                            # 청크의 50% 이상이 표 기호이고, 실제 한글/영어/숫자 글자수가 15자 미만이면 무시
-                            if len(non_ws) > 0 and (table_char_count / len(non_ws) > 0.5) and letters_count < 15:
-                                continue
-                                
                         chunks.append({
                             "content": content_stripped,
-                            "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
+                            "metadata": f"{filename} - (분할 {c_idx+1})"
                         })
-            doc.close()
         except Exception as e:
             st.sidebar.error(f"{filename} 로드 실패: {e}")
         progress_bar.progress(int((f_idx + 1) / total_files * 100))
