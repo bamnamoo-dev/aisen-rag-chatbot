@@ -135,16 +135,16 @@ GLOBAL_CSS = """
         margin: 0 !important;
     }
     
-    /* 사이드바 내부 엘리먼트 간의 Streamlit 기본 외부 간격 극단적으로 축소 */
+    /* 사이드바 내부 엘리먼트 간의 Streamlit 기본 외부 간격 조정 */
     [data-testid="stSidebar"] [data-testid="element-container"] {
-        margin-bottom: 2px !important;
+        margin-bottom: 5px !important;
         padding-bottom: 0px !important;
     }
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 2px !important;
+        gap: 5px !important;
     }
 
-    /* 카테고리 카드 래퍼 공통 스타일 (초압축 간격 및 좌측 정렬) */
+    /* 카테고리 카드 래퍼 공통 스타일 (여유로운 간격 및 좌측 정렬) */
     .active-card-container .stButton > button,
     .inactive-card-container .stButton > button {
         width: 100% !important;
@@ -152,11 +152,11 @@ GLOBAL_CSS = """
         display: flex !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        padding: 5px 8px !important;
+        padding: 8px 14px !important;
         border-radius: 8px !important;
         font-size: 0.84rem !important;
         font-weight: 600 !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 4px !important;
         transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     
