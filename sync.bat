@@ -6,7 +6,17 @@ echo          RAG Auto Sync Tool (Zero-Touch)
 echo ======================================================
 echo.
 
-echo [+] [1/2] Scanning PDF folder changes...
+echo [+] [1/3] Downloading latest law documents (legalize-kr)...
+"C:\Users\PC\AppData\Local\Python\bin\python.exe" legal_downloader.py
+
+if %errorlevel% neq 0 (
+    echo.
+    echo [-] [Error] Failed to download law documents.
+    goto end
+)
+
+echo.
+echo [+] [2/3] Scanning all folder changes and rebuilding vector DB...
 "C:\Users\PC\AppData\Local\Python\bin\python.exe" build_cache.py
 
 if %errorlevel% neq 0 (
@@ -22,12 +32,12 @@ for /f "tokens=*" %%i in ('git status --porcelain') do set changes=yes
 echo.
 echo ------------------------------------------------------
 if "%changes%"=="yes" (
-    echo [+] [2/2] Changes detected. Uploading to GitHub...
+    echo [+] [3/3] Changes detected. Uploading to GitHub...
     echo ------------------------------------------------------
     git add .
-    git commit -m "docs: auto-update pdf documents and vector db cache"
+    git commit -m "docs: auto-update law documents and vector db cache"
     git push origin main
-    
+
     if %errorlevel% neq 0 (
         echo.
         echo [-] [Error] GitHub push failed.
@@ -39,7 +49,7 @@ if "%changes%"=="yes" (
         echo ======================================================
     )
 ) else (
-    echo [+] [2/2] No changes detected. Skipping GitHub upload.
+    echo [+] [3/3] No changes detected. Skipping GitHub upload.
     echo ------------------------------------------------------
     echo [+] All documents and caches are already up-to-date.
 )
@@ -48,4 +58,5 @@ if "%changes%"=="yes" (
 echo.
 echo Press any key to exit.
 pause > nul
+
 
