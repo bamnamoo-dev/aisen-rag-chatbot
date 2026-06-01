@@ -117,14 +117,23 @@ def create_embeddings(chunks, client, model_name="gemini-embedding-2"):
     return np.array(embeddings_list, dtype=np.float32)
 
 def get_folder_hash(folder_path, model_name):
-    """폴더 구성 및 사용 모델 정보를 조합하여 해시 생성"""
+    """폴더 구성 및 사용 모델 정보를 조합하여 해시 생성 (줄바꿈 정규화 포함)"""
     files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('.pdf', '.md'))])
     hasher = hashlib.md5()
     hasher.update(model_name.encode())
     for f in files:
         f_path = os.path.join(folder_path, f)
         hasher.update(f.encode())
-        hasher.update(str(os.path.getsize(f_path)).encode())
+        if f.lower().endswith('.md'):
+            # 마크다운 파일은 OS별 줄바꿈(\\r\\n vs \\n) 차이로 인한 사이즈 불일치 방지를 위해 정규화 후 해시 계산
+            try:
+                with open(f_path, "r", encoding="utf-8") as file:
+                    content = file.read().replace('\r\n', '\n')
+                hasher.update(str(len(content.encode('utf-8'))).encode())
+            except Exception:
+                hasher.update(str(os.path.getsize(f_path)).encode())
+        else:
+            hasher.update(str(os.path.getsize(f_path)).encode())
     return hasher.hexdigest()
 
 def build_vector_db(category, manuals_root, admin_mode, client, model_name="gemini-embedding-2"):
