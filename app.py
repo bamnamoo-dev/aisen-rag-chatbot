@@ -513,15 +513,15 @@ else:
                 수만 페이지의 교육청 지침서 중 필요한 내용을 실시간 검색하여<br>가장 안전하고 똑똑하게 답변하는 스마트 어시스턴트입니다.
             </p>
             <div style="display: flex; justify-content: center; gap: 16px; margin-top: 30px;">
-                <div style="background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 18px; width: 240px; text-align: left; box-shadow: 0 4px 6px rgba(0,0,0,0.01); transition: all 0.2s ease;">
-                    <div style="font-size: 1.8rem; margin-bottom: 8px;">🔒</div>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">100% 로컬 보안</div>
-                    <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px; line-height: 1.4;">지침서 원문 전체가 외부 클라우드나 공용 서버에 절대 노출되지 않아 완벽히 보호됩니다.</div>
+                <div style="background: white; border: 1px solid #f1f5f9; padding: 24px; border-radius: 20px; width: 240px; text-align: left; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.04); transition: all 0.25s ease;">
+                    <div style="font-size: 1.8rem; margin-bottom: 12px;">🔒</div>
+                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 6px;">100% 로컬 보안</div>
+                    <div style="color: #475569; font-size: 0.82rem; margin-top: 4px; line-height: 1.55; letter-spacing: -0.01em;">지침서 원문 전체가 외부 클라우드나 공용 서버에 절대 노출되지 않아 완벽히 보호됩니다.</div>
                 </div>
-                <div style="background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 18px; width: 240px; text-align: left; box-shadow: 0 4px 6px rgba(0,0,0,0.01); transition: all 0.2s ease;">
-                    <div style="font-size: 1.8rem; margin-bottom: 8px;">⚡</div>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">초고속 시맨틱 검색</div>
-                    <div style="color: #64748b; font-size: 0.8rem; margin-top: 4px; line-height: 1.4;">로컬 코사인 유사도 벡터 검색 기술을 활용해 0.001초 만에 최적의 관련 지침을 선별합니다.</div>
+                <div style="background: white; border: 1px solid #f1f5f9; padding: 24px; border-radius: 20px; width: 240px; text-align: left; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.04); transition: all 0.25s ease;">
+                    <div style="font-size: 1.8rem; margin-bottom: 12px;">⚡</div>
+                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 6px;">초고속 시맨틱 검색</div>
+                    <div style="color: #475569; font-size: 0.82rem; margin-top: 4px; line-height: 1.55; letter-spacing: -0.01em;">로컬 코사인 유사도 벡터 검색 기술을 활용해 0.001초 만에 최적의 관련 지침을 선별합니다.</div>
                 </div>
             </div>
             <div style="margin-top: 45px; font-size: 0.92rem; color: #94a3b8; font-weight: 600; letter-spacing: -0.01em;">

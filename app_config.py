@@ -144,6 +144,20 @@ GLOBAL_CSS = """
         gap: 5px !important;
     }
 
+    /* 글로벌 프라이머리 버튼 (레드에서 코발트블루로 강제 전환) */
+    .stButton > button[type="primary"] {
+        background-color: #1e60ff !important;
+        border-color: #1e60ff !important;
+        color: white !important;
+        box-shadow: 0 4px 14px rgba(30, 96, 255, 0.2) !important;
+        font-weight: 700 !important;
+    }
+    .stButton > button[type="primary"]:hover {
+        background-color: #1d4ed8 !important;
+        border-color: #1d4ed8 !important;
+        box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
+    }
+
     /* 카테고리 카드 래퍼 공통 스타일 (여유로운 간격 및 좌측 정렬) */
     .active-card-container .stButton > button,
     .inactive-card-container .stButton > button {
@@ -155,9 +169,8 @@ GLOBAL_CSS = """
         padding: 8px 14px !important;
         border-radius: 8px !important;
         font-size: 0.84rem !important;
-        font-weight: 600 !important;
         margin-bottom: 4px !important;
-        transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 0.2s ease-in-out !important;
     }
     
     /* 내부 텍스트 완전 좌측 정렬 강제 */
@@ -174,34 +187,32 @@ GLOBAL_CSS = """
         margin: 0 !important;
     }
 
-    /* 비활성 카테고리 카드 (투명 & 플랫 피트) */
+    /* 비활성 카테고리 카드 (테두리 제거 및 호버 추가) */
     .inactive-card-container .stButton > button {
         background-color: transparent !important;
+        border: 1px solid transparent !important;
         color: #475569 !important;
-        border: none !important;
         box-shadow: none !important;
+        font-weight: 500 !important;
     }
     
     .inactive-card-container .stButton > button:hover {
         background-color: #f1f5f9 !important;
-        color: #0f172a !important;
-        transform: translateY(-1px) !important;
+        color: #1e60ff !important;
     }
 
-    /* 활성 카테고리 카드 (아이센스토어 시그니처 코발트 블루 & 강한 딥 섀도우) */
+    /* 활성 카테고리 카드 (연블루 배경 + 테두리 & 코발트블루 텍스트) */
     .active-card-container .stButton > button {
-        background: #1e60ff !important;
-        color: #ffffff !important;
-        border: none !important;
-        box-shadow: 0 6px 16px rgba(30, 96, 255, 0.18) !important;
-        transform: translateY(-1px) !important;
+        background: rgba(30, 96, 255, 0.08) !important;
+        border: 1px solid rgba(30, 96, 255, 0.15) !important;
+        color: #1e60ff !important;
+        box-shadow: none !important;
         font-weight: 700 !important;
     }
     
     .active-card-container .stButton > button:hover {
-        background: #1d4ed8 !important;
-        color: #ffffff !important;
-        box-shadow: 0 8px 20px rgba(30, 96, 255, 0.24) !important;
+        background: rgba(30, 96, 255, 0.15) !important;
+        color: #1d4ed8 !important;
     }
 
     /* 지침서 다운로드 박스 프리미엄 스타일 */
