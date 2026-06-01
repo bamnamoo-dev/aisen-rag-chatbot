@@ -91,14 +91,14 @@ class RecursiveCharacterTextSplitter:
   - [RecursiveCharacterTextSplitter]를 연계 호출하여 `700자 / 80자 중첩` 메타 청크로 변환합니다.
   - 메타데이터 포맷: `[파일명 - {page_num}p (분할 {chunk_idx})]` 형식으로 자동 구조화하여 원천 파일과 위치를 정확히 맵핑합니다.
 
-### 3.3. `retrieve_top_chunks(query, category, k=15, threshold=0.4)` (유사도 하한 필터링 및 최신 지침 가중치 검색)
+### 3.3. `retrieve_top_chunks(query, category, k=15, threshold=0.4)` (유사도 하한 필터링, 최신 지침 가중치 및 후보군 확장 검색)
 * **목적**: FAISS 인덱스를 탐색하여 최상위 유효 조각들을 필터링하고, 최신 지침에 가중치를 부여하여 정밀 Reranking합니다.
 * **로직**:
   - 질문 텍스트 `query`를 Google Gemini API(`gemini-embedding-2` 모델)로 실시간 임베딩 변환하고 쿼리 벡터를 얻습니다.
-  - 쿼리 벡터 역시 L2 정규화 처리 후 FAISS의 `index.search()` 함수에 전달하여 Inner Product 거리 기준 탑-K 서치를 수행합니다.
+  - 쿼리 벡터 역시 L2 정규화 처리 후 FAISS의 `index.search()` 함수에 전달합니다. 이때, 최신 지침 데이터가 초기 탐색 단계에서 잘려나가는 문제를 방지하기 위해 FAISS 검색 대상 후보군을 `search_k = max(50, k * 2)`로 확장하여 1차 검색을 수행합니다.
   - 매칭 스코어가 **0.4 이상**인 데이터만 유효 인덱스로 분류하여 수용하고, 이외의 무관 조각들은 전면 제거하여 정보 오염을 원천 차단합니다.
   - **최신 지침 가중치 부스팅 (Score Boosting)**: 파일명에 특정 키워드(`(2026)`, `(최신)`, `_new` 등)가 포함되어 있거나, 해당 폴더 내에서 생성/수정 시간이 가장 최근인 파일들을 '우선순위 그룹'으로 지정합니다. 이 우선순위 그룹에 해당하는 텍스트 조각은 유사도 점수에 **보너스 점수 +0.1**을 추가 부여받습니다.
-  - **재정렬 (Reranking)**: 보너스 점수가 가산된 최종 점수를 기준으로 검색 결과 조각들을 내림차순 정렬하여 AI 컨텍스트 최상단에 배치합니다.
+  - **재정렬 (Reranking) 및 k 슬라이싱**: 보너스 점수가 가산된 최종 점수를 기준으로 검색 결과 조각들을 내림차순 정렬(Reranking)하고, 최종 답변 생성을 위해 상위 `k`개만 슬라이싱하여 AI 컨텍스트 최상단에 배치합니다.
   - **맥락 보강 (Context Reinforcement)**: 검색 적중한 청크(`idx`)의 원문뿐만 아니라, 동일 PDF 문서 내 직전 청크(`idx - 1`) 및 직후 청크(`idx + 1`)까지 3개 청크를 유기적으로 연결하여 AI에 풍부한 전후 맥락 컨텍스트를 제공합니다.
 
 ---
@@ -113,6 +113,10 @@ class RecursiveCharacterTextSplitter:
 - 사용 가능한 Gemini 가용 모델(1.5, 2.0, 2.5 등)들을 API 응답 특성 및 토큰 할당량에 따라 자동 우선순위 배열하여 바인딩합니다.
 - 특정 모델 장애 시 구형 SDK(`legacy_generativeai`)로 우회 처리하며, 루프 내부에서 오류 이력을 관리하기 위해 `errors = []` 초기화 버그를 패치하여 런타임 NameError를 영구 제거했습니다.
 - 검색 결과가 없을 경우 환각 예외 방어 프롬프트 ("공식 지침서 근거를 찾지 못했습니다")를 연계 동작하도록 보강했습니다.
+
+### 4.3. Streamlit Cloud 모듈 캐싱 무력화 및 강제 리로드 로직
+- **문제점**: Streamlit Cloud 환경에서 파일 감지기(File Watcher)가 하위 디렉토리(예: `core/`, `services/`) 모듈의 변경을 감지하지 못하거나 Python 캐싱으로 인해 이전 코드가 계속 로드되어 있는 현상이 발생합니다.
+- **해결책**: 메인 진입 스크립트인 `app.py` 맨 위에 `importlib.reload()`를 탑재하여 `app_config`, `core.parser`, `core.vector_db`, `services.llm_service` 모듈이 세션 시작 및 런타임 호출 시 항상 강제 갱신되도록 차단 장치를 구현했습니다.
 
 ---
 
