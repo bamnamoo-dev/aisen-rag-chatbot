@@ -120,7 +120,7 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
         # 유료 티어 속도 향상을 위해 대기시간 단축 (기존 60.0초 -> 0.2초)
         time.sleep(0.2)
             
-    return np.array(embeddings_list)
+    return np.array(embeddings_list, dtype=np.float32)
 
 def build_category_cache(category, manuals_root, client, model_name):
     cat_path = os.path.join(manuals_root, category)

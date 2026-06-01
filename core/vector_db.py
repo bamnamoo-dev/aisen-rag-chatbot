@@ -114,7 +114,7 @@ def create_embeddings(chunks, client, model_name="gemini-embedding-2"):
         
     progress_bar.empty()
     status_text.empty()
-    return np.array(embeddings_list)
+    return np.array(embeddings_list, dtype=np.float32)
 
 def get_folder_hash(folder_path, model_name):
     """폴더 구성 및 사용 모델 정보를 조합하여 해시 생성"""
