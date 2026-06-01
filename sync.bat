@@ -7,7 +7,7 @@ echo ======================================================
 echo.
 
 echo [+] [1/3] Downloading latest law documents (legalize-kr)...
-"C:\Users\PC\AppData\Local\Python\bin\python.exe" legal_downloader.py
+python legal_downloader.py
 
 if %errorlevel% neq 0 (
     echo.
@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [+] [2/3] Scanning all folder changes and rebuilding vector DB...
-"C:\Users\PC\AppData\Local\Python\bin\python.exe" build_cache.py
+python build_cache.py
 
 if %errorlevel% neq 0 (
     echo.

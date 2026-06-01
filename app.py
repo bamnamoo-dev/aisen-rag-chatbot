@@ -35,7 +35,14 @@ if not api_key:
     st.error("GOOGLE_API_KEY가 .env 파일에 설정되어 있지 않습니다.")
     st.stop()
 
-admin_mode = os.getenv("ADMIN_MODE", "False").lower() == "true"
+# 세션 상태에 admin_mode 초기화 및 URL 파라미터 확인 (?mode=admin)
+if "admin_mode" not in st.session_state:
+    st.session_state.admin_mode = False
+
+if st.query_params.get("mode") == "admin":
+    st.session_state.admin_mode = True
+
+admin_mode = st.session_state.admin_mode
 
 # 전역 객체 초기화
 client = get_genai_client(api_key)
@@ -84,8 +91,8 @@ if "legal_messages" not in st.session_state:
     st.session_state.legal_messages = []
 if "selected_category" not in st.session_state:
     st.session_state.selected_category = None
-if "vector_db" not in st.session_state:
-    st.session_state.vector_db = {} 
+if "rebuild_trigger" not in st.session_state:
+    st.session_state.rebuild_trigger = 0.0 
 
 manuals_root = "manuals"
 
@@ -138,10 +145,7 @@ if admin_mode:
     if st.session_state.selected_category:
         if st.sidebar.button("♻️ 현재 카테고리 캐시 재빌드", use_container_width=True):
             cat_to_rebuild = st.session_state.selected_category
-            # 1. 세션 캐시 제거
-            if cat_to_rebuild in st.session_state.vector_db:
-                del st.session_state.vector_db[cat_to_rebuild]
-            # 2. 물리 파일 제거
+            # 1. 물리 파일 제거
             cat_path = os.path.join(manuals_root, cat_to_rebuild)
             cache_file = os.path.join(cat_path, ".vector_cache.pkl")
             if os.path.exists(cache_file):
@@ -149,6 +153,8 @@ if admin_mode:
                     os.remove(cache_file)
                 except Exception as e:
                     st.sidebar.error(f"캐시 파일 삭제 실패: {e}")
+            # 2. 전역 캐시 재빌드 트리거 활성화
+            st.session_state.rebuild_trigger = time.time()
             st.rerun()
 
 if st.session_state.current_tab == "지침서":
@@ -241,17 +247,17 @@ st.sidebar.caption("💡 **안내 및 면책 조항**: 본 서비스는 교육�
 selected_category = st.session_state.selected_category
 
 if selected_category:
-    if selected_category not in st.session_state.vector_db:
-        with st.spinner(f"AI가 '{selected_category}' 지침 도서관을 구축 중입니다..."):
-            st.session_state.vector_db[selected_category] = build_vector_db(
-                category=selected_category, 
-                manuals_root=manuals_root, 
-                admin_mode=admin_mode, 
-                client=client, 
-                model_name=LOCAL_MODEL_NAME
-            )
+    with st.spinner(f"AI가 '{selected_category}' 지침 도서관을 구축 중입니다..."):
+        db = build_vector_db(
+            category=selected_category, 
+            manuals_root=manuals_root, 
+            admin_mode=admin_mode, 
+            _client=client, 
+            model_name=LOCAL_MODEL_NAME,
+            rebuild_trigger=st.session_state.rebuild_trigger
+        )
     
-    db_stats = st.session_state.vector_db[selected_category]
+    db_stats = db
     
     if not db_stats.chunks:
         st.markdown(f"""
@@ -327,7 +333,7 @@ if selected_category:
         with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
             st.write("🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중..." if st.session_state.current_tab == "지침서" else "🛰️ 1. 로컬 법령 벡터 DB에서 관련 조항 탐색 중...")
             time.sleep(0.3)
-            relevant_chunks = retrieve_top_chunks(prompt, selected_category, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+            relevant_chunks = retrieve_top_chunks(prompt, db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
             
             st.write(f"📊 2. 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개)")
             time.sleep(0.2)

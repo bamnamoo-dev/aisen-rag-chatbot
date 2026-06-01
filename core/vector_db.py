@@ -145,7 +145,8 @@ def get_folder_hash(folder_path, model_name):
             hasher.update(str(os.path.getsize(f_path)).encode())
     return hasher.hexdigest()
 
-def build_vector_db(category, manuals_root, admin_mode, client, model_name="gemini-embedding-2"):
+@st.cache_resource
+def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gemini-embedding-2", rebuild_trigger=0):
     """지침서 폴더의 PDF들을 분석하여 로컬 벡터 DB 구축 및 FAISS 인덱싱"""
     cat_path = os.path.join(manuals_root, category)
     current_hash = get_folder_hash(cat_path, model_name)
@@ -168,7 +169,7 @@ def build_vector_db(category, manuals_root, admin_mode, client, model_name="gemi
     # 관리자 모드일 경우에만 새로 분석 시작
     st.sidebar.info("⚙️ [관리자] 새 PDF 문서 의미 분할 및 구글 임베딩 분석을 진행합니다...")
     chunks = get_pdf_chunks(cat_path)
-    embeddings = create_embeddings(chunks, client, model_name)
+    embeddings = create_embeddings(chunks, _client, model_name)
     
     if embeddings is not None and len(embeddings) > 0:
         db.chunks = chunks
@@ -216,12 +217,11 @@ def get_priority_files(category, manuals_root="manuals"):
         
     return priority_files
 
-def retrieve_top_chunks(query, category, client, k=15, threshold=0.4, model_name="gemini-embedding-2", manuals_root="manuals"):
+def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemini-embedding-2", manuals_root="manuals"):
     """질문과 관련 있는 지침 조각을 FAISS로 검색하고 유사도 임계치 필터링, 최신 파일 가중치(Boosting) 부여, 맥락 보강 및 Reranking"""
-    if category not in st.session_state.vector_db:
+    if db is None:
         return []
     
-    db = st.session_state.vector_db[category]
     chunks = db.chunks
     index = db.index
 
