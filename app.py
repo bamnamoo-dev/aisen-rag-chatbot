@@ -9,7 +9,7 @@ from google.genai import types
 import google.generativeai as legacy_genai
 
 # 분리된 모듈 임포트
-from config import get_system_prompt, get_category_emoji, GLOBAL_CSS, get_legal_system_prompt
+from app_config import get_system_prompt, get_category_emoji, GLOBAL_CSS, get_legal_system_prompt
 from core.vector_db import build_vector_db, retrieve_top_chunks
 from services.llm_service import get_genai_client, get_generation_model_name
 

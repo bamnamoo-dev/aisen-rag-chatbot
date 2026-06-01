@@ -1,6 +1,6 @@
 import streamlit as st
 from google import genai
-from config import GEMINI_PRIORITY
+from app_config import GEMINI_PRIORITY
 
 # 제미나이 클라이언트 초기화 (캐싱 적용)
 @st.cache_resource
