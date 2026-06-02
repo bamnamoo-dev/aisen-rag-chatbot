@@ -90,6 +90,8 @@ if "selected_category" not in st.session_state:
     st.session_state.selected_category = None
 if "rebuild_trigger" not in st.session_state:
     st.session_state.rebuild_trigger = 0.0 
+if "show_manual" not in st.session_state:
+    st.session_state.show_manual = False
 
 manuals_root = "manuals"
 
@@ -122,6 +124,7 @@ with tab_col1:
     if st.button("📋 지침/매뉴얼", key="tab_guidelines", use_container_width=True, type=btn_type):
         st.session_state.current_tab = "지침서"
         st.session_state.selected_category = None
+        st.session_state.show_manual = False
         st.rerun()
 with tab_col2:
     is_laws = st.session_state.current_tab == "법령"
@@ -129,19 +132,29 @@ with tab_col2:
     if st.button("⚖️ 법령/조례", key="tab_laws", use_container_width=True, type=btn_type):
         st.session_state.current_tab = "법령"
         st.session_state.selected_category = "조례규칙"
+        st.session_state.show_manual = False
         st.rerun()
 st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
-# 사용자 설명서 다운로드 버튼 추가
+# 사용자 설명서 다운로드 및 보기 추가
 manual_file_path = "simple_user_manual.html"
 if os.path.exists(manual_file_path):
     try:
-        with open(manual_file_path, "r", encoding="utf-8") as f:
-            manual_html_content = f.read()
         st.sidebar.markdown("<div class='manual-container'>", unsafe_allow_html=True)
         st.sidebar.markdown("<div style='font-size:0.85rem; font-weight:700; color:#1e60ff; margin-bottom:8px;'>📖 RAG 시스템 사용 설명서</div>", unsafe_allow_html=True)
+        
+        # 보기 버튼
+        btn_type = "primary" if st.session_state.show_manual else "secondary"
+        if st.sidebar.button("📖 설명서 화면에 보기", key="btn_show_manual", use_container_width=True, type=btn_type):
+            st.session_state.show_manual = not st.session_state.show_manual
+            st.session_state.selected_category = None
+            st.rerun()
+
+        # 다운로드 버튼
+        with open(manual_file_path, "r", encoding="utf-8") as f:
+            manual_html_content = f.read()
         st.sidebar.download_button(
-            label="⬇️ 설명서 다운로드 (HTML)",
+            label="⬇️ 파일로 다운로드 (HTML)",
             data=manual_html_content,
             file_name="AI-SENSE_사용설명서.html",
             mime="text/html",
@@ -206,6 +219,7 @@ if st.session_state.current_tab == "지침서":
                 st.session_state.selected_category = cat
                 st.session_state.messages = []
                 if "chat" in st.session_state: del st.session_state.chat
+            st.session_state.show_manual = False
             st.rerun()
                 
         if is_active:
@@ -283,6 +297,17 @@ st.sidebar.caption("💡 **안내 및 면책 조항**: 본 서비스는 교육�
 
 # 메인 렌더링
 selected_category = st.session_state.selected_category
+
+if st.session_state.show_manual:
+    manual_file_path = "simple_user_manual.html"
+    if os.path.exists(manual_file_path):
+        with open(manual_file_path, "r", encoding="utf-8") as f:
+            manual_html = f.read()
+        import streamlit.components.v1 as components
+        components.html(manual_html, height=950, scrolling=True)
+    else:
+        st.error("설명서 파일을 찾을 수 없습니다.")
+    st.stop()
 
 if selected_category:
     with st.spinner(f"AI가 '{selected_category}' 지침 도서관을 구축 중입니다..."):
