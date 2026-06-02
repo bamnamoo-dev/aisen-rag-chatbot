@@ -207,10 +207,8 @@ if st.session_state.current_tab == "지침서":
         emoji = get_category_emoji(cat)
         btn_label = f"{emoji} {cat}"
         
-        container_class = "active-card-container" if is_active else "inactive-card-container"
-        st.sidebar.markdown(f"<div class='{container_class}'>", unsafe_allow_html=True)
-        clicked = st.sidebar.button(btn_label, key=f"btn_{cat}", use_container_width=True)
-        st.sidebar.markdown("</div>", unsafe_allow_html=True)
+        btn_type = "primary" if is_active else "secondary"
+        clicked = st.sidebar.button(btn_label, key=f"btn_{cat}", use_container_width=True, type=btn_type)
         
         if clicked:
             if st.session_state.selected_category == cat:

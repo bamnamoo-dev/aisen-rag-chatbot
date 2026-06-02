@@ -116,7 +116,8 @@ GLOBAL_CSS = """
         border-right: 1px solid #f1f5f9 !important;
     }
     [data-testid="stSidebarUserContent"] {
-        padding-top: 1.5rem !important;
+        padding-top: 0.5rem !important; /* 상단 공백 최소화 */
+        padding-bottom: 0.5rem !important;
     }
     
     /* 사이드바 내부의 모든 버튼 및 내부 자식 요소 강제 좌측 정렬 */
@@ -140,82 +141,69 @@ GLOBAL_CSS = """
     
     /* 사이드바 내부 엘리먼트 간의 Streamlit 기본 외부 간격 조정 */
     [data-testid="stSidebar"] [data-testid="element-container"] {
-        margin-bottom: 5px !important;
+        margin-bottom: 4px !important;
         padding-bottom: 0px !important;
     }
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 5px !important;
+        gap: 4px !important; /* 위아래 간격 더 좁게 */
     }
 
-    /* 글로벌 프라이머리 버튼 (레드에서 코발트블루로 강제 전환) */
-    .stButton > button[type="primary"] {
-        background-color: #1e60ff !important;
+    /* 글로벌 프라이머리 버튼 (본문 영역 포함 - 대화용 등) */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
         border-color: #1e60ff !important;
         color: white !important;
         box-shadow: 0 4px 14px rgba(30, 96, 255, 0.2) !important;
         font-weight: 700 !important;
     }
-    .stButton > button[type="primary"]:hover {
-        background-color: #1d4ed8 !important;
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #0a3680 100%) !important;
         border-color: #1d4ed8 !important;
         box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
 
-    /* 카테고리 카드 래퍼 공통 스타일 (여유로운 간격 및 좌측 정렬) */
-    .active-card-container .stButton > button,
-    .inactive-card-container .stButton > button {
+    /* 사이드바 개별 버튼 및 카테고리 카드 디자인 (설명서 카드 테마 매칭) */
+    div[data-testid="stSidebar"] .stButton > button {
         width: 100% !important;
         text-align: left !important;
         display: flex !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        padding: 8px 14px !important;
-        border-radius: 8px !important;
-        font-size: 0.84rem !important;
-        margin-bottom: 4px !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-    
-    /* 내부 텍스트 완전 좌측 정렬 강제 */
-    .active-card-container .stButton > button div[data-testid="stMarkdownContainer"],
-    .inactive-card-container .stButton > button div[data-testid="stMarkdownContainer"],
-    .active-card-container .stButton > button p,
-    .inactive-card-container .stButton > button p {
-        width: 100% !important;
-        text-align: left !important;
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        gap: 6px !important;
-        margin: 0 !important;
-    }
-
-    /* 비활성 카테고리 카드 (테두리 제거 및 호버 추가) */
-    .inactive-card-container .stButton > button {
-        background-color: transparent !important;
-        border: 1px solid transparent !important;
-        color: #475569 !important;
-        box-shadow: none !important;
+        padding: 8px 12px !important; /* 세밀한 패딩 */
+        border-radius: 10px !important; /* 설명서 카드와 동일한 둥글기 */
+        font-size: 0.82rem !important;
+        margin-bottom: 2px !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         font-weight: 500 !important;
-    }
-    
-    .inactive-card-container .stButton > button:hover {
-        background-color: #f1f5f9 !important;
-        color: #1e60ff !important;
+        border: 1px solid #e2e8f0 !important;
+        background-color: #ffffff !important;
+        color: #475569 !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
     }
 
-    /* 활성 카테고리 카드 (연블루 배경 + 테두리 & 코발트블루 텍스트) */
-    .active-card-container .stButton > button {
-        background: rgba(30, 96, 255, 0.08) !important;
-        border: 1px solid rgba(30, 96, 255, 0.15) !important;
+    /* 사이드바 버튼 마우스 호버 효과 */
+    div[data-testid="stSidebar"] .stButton > button:hover {
+        border-color: #1e60ff !important;
         color: #1e60ff !important;
-        box-shadow: none !important;
-        font-weight: 700 !important;
+        background-color: #eff6ff !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(30, 96, 255, 0.08) !important;
     }
-    
-    .active-card-container .stButton > button:hover {
-        background: rgba(30, 96, 255, 0.15) !important;
-        color: #1d4ed8 !important;
+
+    /* 사이드바 내 활성화된 버튼 (kind = primary) 스타일 */
+    div[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #1e60ff !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 14px rgba(30, 96, 255, 0.2) !important;
+    }
+
+    div[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #0a3680 100%) !important;
+        color: #ffffff !important;
+        border-color: #1d4ed8 !important;
+        box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
 
     /* 지침서 다운로드 박스 프리미엄 스타일 */
