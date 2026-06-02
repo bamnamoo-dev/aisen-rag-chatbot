@@ -143,11 +143,16 @@ GLOBAL_CSS = """
     
     /* 사이드바 내부 엘리먼트 간의 Streamlit 기본 외부 간격 조정 */
     [data-testid="stSidebar"] [data-testid="element-container"] {
-        margin-bottom: 3px !important; /* 외부 간격 축소 */
+        margin-bottom: 8px !important; /* 세로 간격 미세 조정 */
         padding-bottom: 0px !important;
     }
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 3px !important; /* 위아래 간격 더 좁게 */
+        gap: 8px !important; /* 위아래 간격 미세 조정 */
+    }
+
+    /* 사이드바 내부 2열 격자의 가로 간격 축소 */
+    div[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+        gap: 4px !important; /* 기본 16px에서 4px로 축소하여 가로 간격 좁힘 */
     }
 
     /* 글로벌 프라이머리 버튼 (본문 영역 포함 - 대화용 등) */
@@ -174,7 +179,7 @@ GLOBAL_CSS = """
         padding: 6px 8px !important; /* 패딩 대폭 축소하여 한줄 노출 최적화 */
         border-radius: 8px !important; /* 약간 줄여 더 콤팩트하게 */
         font-size: 0.78rem !important; /* 폰트 크기 줄임 */
-        margin-bottom: 2px !important;
+        margin-bottom: 8px !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         font-weight: 500 !important;
         border: 1px solid #e2e8f0 !important;
