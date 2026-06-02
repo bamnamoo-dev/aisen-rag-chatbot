@@ -136,7 +136,7 @@ with tab_col2:
         st.rerun()
 st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
-# 사용자 설명서 다운로드 및 보기 추가
+# 사용자 설명서 보기 추가
 manual_file_path = "simple_user_manual.html"
 if os.path.exists(manual_file_path):
     try:
@@ -149,18 +149,6 @@ if os.path.exists(manual_file_path):
             st.session_state.show_manual = not st.session_state.show_manual
             st.session_state.selected_category = None
             st.rerun()
-
-        # 다운로드 버튼
-        with open(manual_file_path, "r", encoding="utf-8") as f:
-            manual_html_content = f.read()
-        st.sidebar.download_button(
-            label="⬇️ 파일로 다운로드 (HTML)",
-            data=manual_html_content,
-            file_name="AI-SENSE_사용설명서.html",
-            mime="text/html",
-            key="dl_system_manual",
-            use_container_width=True
-        )
         st.sidebar.markdown("</div>", unsafe_allow_html=True)
     except Exception:
         pass
@@ -201,42 +189,71 @@ if st.session_state.current_tab == "지침서":
     categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d != "조례규칙"]
     categories = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
     
-    # 사이드바 - 카테고리 버튼 생성
-    for cat in categories:
-        is_active = st.session_state.selected_category == cat
-        emoji = get_category_emoji(cat)
-        btn_label = f"{emoji} {cat}"
+    # 사이드바 - 카테고리 버튼 생성 (2열 격자 배치)
+    active_cat_to_show_files = None
+    for i in range(0, len(categories), 2):
+        cols = st.sidebar.columns(2)
         
-        btn_type = "primary" if is_active else "secondary"
-        clicked = st.sidebar.button(btn_label, key=f"btn_{cat}", use_container_width=True, type=btn_type)
-        
-        if clicked:
-            if st.session_state.selected_category == cat:
-                st.session_state.selected_category = None
-            else:
-                st.session_state.selected_category = cat
-                st.session_state.messages = []
-                if "chat" in st.session_state: del st.session_state.chat
-            st.session_state.show_manual = False
-            st.rerun()
+        # 첫 번째 열
+        cat1 = categories[i]
+        is_active1 = st.session_state.selected_category == cat1
+        if is_active1:
+            active_cat_to_show_files = cat1
+        emoji1 = get_category_emoji(cat1)
+        btn_label1 = f"{emoji1} {cat1}"
+        btn_type1 = "primary" if is_active1 else "secondary"
+        with cols[0]:
+            clicked1 = st.button(btn_label1, key=f"btn_{cat1}", use_container_width=True, type=btn_type1)
+            if clicked1:
+                if st.session_state.selected_category == cat1:
+                    st.session_state.selected_category = None
+                else:
+                    st.session_state.selected_category = cat1
+                    st.session_state.messages = []
+                    if "chat" in st.session_state: del st.session_state.chat
+                st.session_state.show_manual = False
+                st.rerun()
                 
-        if is_active:
-            cat_path = os.path.join(manuals_root, cat)
-            files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith('.pdf')])
+        # 두 번째 열
+        if i + 1 < len(categories):
+            cat2 = categories[i+1]
+            is_active2 = st.session_state.selected_category == cat2
+            if is_active2:
+                active_cat_to_show_files = cat2
+            emoji2 = get_category_emoji(cat2)
+            btn_label2 = f"{emoji2} {cat2}"
+            btn_type2 = "primary" if is_active2 else "secondary"
+            with cols[1]:
+                clicked2 = st.button(btn_label2, key=f"btn_{cat2}", use_container_width=True, type=btn_type2)
+                if clicked2:
+                    if st.session_state.selected_category == cat2:
+                        st.session_state.selected_category = None
+                    else:
+                        st.session_state.selected_category = cat2
+                        st.session_state.messages = []
+                        if "chat" in st.session_state: del st.session_state.chat
+                    st.session_state.show_manual = False
+                    st.rerun()
+
+    # 활성화된 카테고리의 지침 파일 다운로드 (전체 너비 렌더링)
+    if active_cat_to_show_files:
+        cat_path = os.path.join(manuals_root, active_cat_to_show_files)
+        files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith('.pdf')])
+        if files:
+            st.sidebar.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
             with st.sidebar.container():
                 st.markdown("<div class='file-container'>", unsafe_allow_html=True)
-                if files:
-                    st.markdown("<div style='font-size:0.85rem; font-weight:600; margin-bottom:8px;'>📄 지침서 다운로드</div>", unsafe_allow_html=True)
-                    for f in files:
-                        f_path = os.path.join(cat_path, f)
-                        display_name = f[:-4] if f.lower().endswith('.pdf') else f
-                        st.download_button(
-                            label=f"⬇️ {display_name}", 
-                            data=get_file_binary(f_path), 
-                            file_name=f, 
-                            key=f"dl_{f}", 
-                            use_container_width=True
-                        )
+                st.markdown(f"<div style='font-size:0.85rem; font-weight:600; margin-bottom:8px;'>📄 {active_cat_to_show_files} 지침서 다운로드</div>", unsafe_allow_html=True)
+                for f in files:
+                    f_path = os.path.join(cat_path, f)
+                    display_name = f[:-4] if f.lower().endswith('.pdf') else f
+                    st.download_button(
+                        label=f"⬇️ {display_name}", 
+                        data=get_file_binary(f_path), 
+                        file_name=f, 
+                        key=f"dl_{f}", 
+                        use_container_width=True
+                    )
                 st.markdown("</div>", unsafe_allow_html=True)
 else:
     # 법령/조례 모드 사이드바 표시
