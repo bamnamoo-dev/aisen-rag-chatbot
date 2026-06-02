@@ -127,25 +127,27 @@ GLOBAL_CSS = """
         justify-content: flex-start !important;
         text-align: left !important;
     }
-    [data-testid="stSidebar"] button div[data-testid="stMarkdownContainer"],
+    
+    /* 사이드바 텍스트 줄바꿈 방지(nowrap) 및 말줄임표(ellipsis) 강제 적용 */
     [data-testid="stSidebar"] button p,
-    [data-testid="stSidebar"] button span {
+    [data-testid="stSidebar"] button span,
+    [data-testid="stSidebar"] button div[data-testid="stMarkdownContainer"] p {
         width: 100% !important;
         text-align: left !important;
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        gap: 6px !important;
+        display: block !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+        overflow: hidden !important;
         margin: 0 !important;
     }
     
     /* 사이드바 내부 엘리먼트 간의 Streamlit 기본 외부 간격 조정 */
     [data-testid="stSidebar"] [data-testid="element-container"] {
-        margin-bottom: 4px !important;
+        margin-bottom: 3px !important; /* 외부 간격 축소 */
         padding-bottom: 0px !important;
     }
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 4px !important; /* 위아래 간격 더 좁게 */
+        gap: 3px !important; /* 위아래 간격 더 좁게 */
     }
 
     /* 글로벌 프라이머리 버튼 (본문 영역 포함 - 대화용 등) */
@@ -169,9 +171,9 @@ GLOBAL_CSS = """
         display: flex !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        padding: 8px 12px !important; /* 세밀한 패딩 */
-        border-radius: 10px !important; /* 설명서 카드와 동일한 둥글기 */
-        font-size: 0.82rem !important;
+        padding: 6px 8px !important; /* 패딩 대폭 축소하여 한줄 노출 최적화 */
+        border-radius: 8px !important; /* 약간 줄여 더 콤팩트하게 */
+        font-size: 0.78rem !important; /* 폰트 크기 줄임 */
         margin-bottom: 2px !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         font-weight: 500 !important;
@@ -260,15 +262,16 @@ GLOBAL_CSS = """
     .manual-container {
         background-color: #eff6ff !important;
         border-radius: 12px !important;
-        padding: 12px !important;
-        margin-top: 4px !important;
-        margin-bottom: 15px !important;
+        padding: 8px 10px !important; /* 패딩 대폭 축소 */
+        margin-top: 2px !important;    /* 마진 축소 */
+        margin-bottom: 8px !important; /* 마진 축소 */
         border: 1px solid #bfdbfe !important;
         border-left: 4px solid #1e60ff !important;
         box-shadow: 0 2px 8px rgba(30, 96, 255, 0.04) !important;
     }
     
-    .manual-container .stDownloadButton > button {
+    /* 설명서 내부 보기 버튼 스타일 개별 오버라이드 */
+    .manual-container .stButton > button {
         width: 100% !important;
         text-align: left !important;
         display: flex !important;
@@ -284,9 +287,9 @@ GLOBAL_CSS = """
         transition: all 0.2s ease !important;
     }
     
-    .manual-container .stDownloadButton > button div[data-testid="stMarkdownContainer"],
-    .manual-container .stDownloadButton > button p,
-    .manual-container .stDownloadButton > button span {
+    .manual-container .stButton > button div[data-testid="stMarkdownContainer"],
+    .manual-container .stButton > button p,
+    .manual-container .stButton > button span {
         width: 100% !important;
         text-align: left !important;
         display: inline-block !important;
@@ -297,12 +300,20 @@ GLOBAL_CSS = """
         margin: 0 !important;
     }
     
-    .manual-container .stDownloadButton > button:hover {
+    .manual-container .stButton > button:hover {
         background-color: #eff6ff !important;
         border-color: #bfdbfe !important;
         color: #1d4ed8 !important;
         transform: translateY(-1px) !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
+    }
+
+    /* 보기 활성화 상태 스타일 */
+    .manual-container .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
+        color: #ffffff !important;
+        border-color: #1e60ff !important;
+        box-shadow: 0 4px 10px rgba(30, 96, 255, 0.15) !important;
     }
     
     /* 대화 카드형 스타일 및 Pretendard 최적화 */

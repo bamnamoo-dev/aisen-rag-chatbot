@@ -116,7 +116,6 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # 2-Tab 네비게이션 상단 배치
-st.sidebar.markdown("<div style='margin-bottom: 5px;'>", unsafe_allow_html=True)
 tab_col1, tab_col2 = st.sidebar.columns(2)
 with tab_col1:
     is_guidelines = st.session_state.current_tab == "지침서"
@@ -134,7 +133,6 @@ with tab_col2:
         st.session_state.selected_category = "조례규칙"
         st.session_state.show_manual = False
         st.rerun()
-st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
 # 사용자 설명서 보기 추가
 manual_file_path = "simple_user_manual.html"
