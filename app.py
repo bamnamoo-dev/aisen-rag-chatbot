@@ -132,6 +132,27 @@ with tab_col2:
         st.rerun()
 st.sidebar.markdown("</div>", unsafe_allow_html=True)
 
+# 사용자 설명서 다운로드 버튼 추가
+manual_file_path = "simple_user_manual.html"
+if os.path.exists(manual_file_path):
+    try:
+        with open(manual_file_path, "r", encoding="utf-8") as f:
+            manual_html_content = f.read()
+        st.sidebar.markdown("<div class='manual-container'>", unsafe_allow_html=True)
+        st.sidebar.markdown("<div style='font-size:0.85rem; font-weight:700; color:#1e60ff; margin-bottom:8px;'>📖 RAG 시스템 사용 설명서</div>", unsafe_allow_html=True)
+        st.sidebar.download_button(
+            label="⬇️ 설명서 다운로드 (HTML)",
+            data=manual_html_content,
+            file_name="AI-SENSE_사용설명서.html",
+            mime="text/html",
+            key="dl_system_manual",
+            use_container_width=True
+        )
+        st.sidebar.markdown("</div>", unsafe_allow_html=True)
+    except Exception:
+        pass
+
+
 if admin_mode:
     st.sidebar.markdown("""
         <div style="background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(225, 29, 72, 0.03);">

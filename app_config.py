@@ -267,6 +267,55 @@ GLOBAL_CSS = """
         transform: translateY(-1px) !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
     }
+
+    /* 설명서 다운로드 박스 프리미엄 스타일 */
+    .manual-container {
+        background-color: #eff6ff !important;
+        border-radius: 12px !important;
+        padding: 12px !important;
+        margin-top: 4px !important;
+        margin-bottom: 15px !important;
+        border: 1px solid #bfdbfe !important;
+        border-left: 4px solid #1e60ff !important;
+        box-shadow: 0 2px 8px rgba(30, 96, 255, 0.04) !important;
+    }
+    
+    .manual-container .stDownloadButton > button {
+        width: 100% !important;
+        text-align: left !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        background-color: #ffffff !important;
+        color: #1e60ff !important;
+        border: 1px solid #bfdbfe !important;
+        border-radius: 8px !important;
+        padding: 6px 10px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .manual-container .stDownloadButton > button div[data-testid="stMarkdownContainer"],
+    .manual-container .stDownloadButton > button p,
+    .manual-container .stDownloadButton > button span {
+        width: 100% !important;
+        text-align: left !important;
+        display: inline-block !important;
+        white-space: nowrap !important;
+        text-overflow: ellipsis !important;
+        overflow: hidden !important;
+        vertical-align: middle !important;
+        margin: 0 !important;
+    }
+    
+    .manual-container .stDownloadButton > button:hover {
+        background-color: #eff6ff !important;
+        border-color: #bfdbfe !important;
+        color: #1d4ed8 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
+    }
     
     /* 대화 카드형 스타일 및 Pretendard 최적화 */
     [data-testid="stChatMessage"] {
