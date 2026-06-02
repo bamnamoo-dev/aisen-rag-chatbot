@@ -341,22 +341,18 @@ if selected_category:
     # 헤더 렌더링 분기
     if st.session_state.current_tab == "지침서":
         st.markdown(f"""
-            <div style="padding: 10px 0 20px 0; border-bottom: 1px solid #f1f5f9; margin-bottom: 30px;">
-                <div class="header-pill">LIVE RAG ENGINE SYSTEM</div>
-                <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 6px; letter-spacing: -0.02em;">{selected_category}</h1>
-                <div style="color: #64748b; font-size: 0.95rem; font-weight: 500;">
-                    행정지원과의 공식 지침서 분석 및 실시간 답변을 제공합니다.
-                </div>
+            <div style="background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%); color: white; padding: 24px 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(30, 96, 255, 0.08); margin-bottom: 30px; position: relative; overflow: hidden; text-align: left;">
+                <span style="display: inline-block; background: rgba(255, 255, 255, 0.15); padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; text-transform: uppercase;">LIVE RAG ENGINE SYSTEM</span>
+                <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px 0; color: white;">{selected_category}</h1>
+                <p style="font-size: 0.9rem; opacity: 0.9; margin: 0; font-weight: 400;">행정지원과의 공식 지침서 분석 및 실시간 답변을 제공합니다.</p>
             </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
-            <div style="padding: 10px 0 20px 0; border-bottom: 1px solid #f1f5f9; margin-bottom: 30px;">
-                <div class="header-pill" style="background-color: #f0fdf4 !important; color: #16a34a !important;">LEGAL SEARCH ENGINE</div>
-                <h1 style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-top: 4px; margin-bottom: 6px; letter-spacing: -0.02em;">⚖️ 교육행정 법령 및 조례 검색</h1>
-                <div style="color: #64748b; font-size: 0.95rem; font-weight: 500;">
-                    학교 행정과 밀접한 핵심 상위 법령 및 서울시교육청 조례 규칙 원문 검색을 지원합니다.
-                </div>
+            <div style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); color: white; padding: 24px 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); margin-bottom: 30px; position: relative; overflow: hidden; text-align: left;">
+                <span style="display: inline-block; background: rgba(255, 255, 255, 0.15); padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; text-transform: uppercase;">LEGAL SEARCH ENGINE</span>
+                <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px 0; color: white;">⚖️ 교육행정 법령 및 조례 검색</h1>
+                <p style="font-size: 0.9rem; opacity: 0.9; margin: 0; font-weight: 400;">학교 행정과 밀접한 핵심 상위 법령 및 서울시교육청 조례 규칙 원문 검색을 지원합니다.</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -552,26 +548,32 @@ if selected_category:
 else:
     # 지침서 기본 랜딩 페이지
     st.markdown("""
-        <div style="padding: 80px 0; text-align: center; max-width: 800px; margin: 0 auto;">
-            <div style="background-color: #eff6ff; color: #1e60ff; width: 80px; height: 80px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 24px auto; box-shadow: 0 10px 25px rgba(30, 96, 255, 0.15);">🏛️</div>
-            <h2 style="color: #0f172a; font-weight: 800; font-size: 2.2rem; margin-bottom: 8px; letter-spacing: -0.02em;">교육행정 지능형 RAG 시스템</h2>
-            <p style="color: #64748b; font-size: 1.05rem; margin-bottom: 24px; line-height: 1.5; font-weight: 500;">
-                수만 페이지의 교육청 지침서 중 필요한 내용을 실시간 검색하여<br>가장 안전하고 똑똑하게 답변하는 스마트 어시스턴트입니다.
-            </p>
-            <div style="display: flex; justify-content: center; gap: 16px; margin-top: 30px;">
-                <div style="background: white; border: 1px solid #f1f5f9; padding: 24px; border-radius: 20px; width: 240px; text-align: left; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.04); transition: all 0.25s ease;">
-                    <div style="font-size: 1.8rem; margin-bottom: 12px;">☁️</div>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 6px;">클라우드 인프라 최적화</div>
-                    <div style="color: #475569; font-size: 0.82rem; margin-top: 4px; line-height: 1.55; letter-spacing: -0.01em;">외부 유출 우려가 없는 공개 행정 지침 데이터의 특성을 활용, 로컬 FAISS 인덱싱 기술과 구글 Gemini API의 연산력을 결합한 고속·고효율 하이브리드 구조</div>
-                </div>
-                <div style="background: white; border: 1px solid #f1f5f9; padding: 24px; border-radius: 20px; width: 240px; text-align: left; box-shadow: 0 12px 40px rgba(15, 23, 42, 0.04); transition: all 0.25s ease;">
-                    <div style="font-size: 1.8rem; margin-bottom: 12px;">⚡</div>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 6px;">초고속 시맨틱 검색</div>
-                    <div style="color: #475569; font-size: 0.82rem; margin-top: 4px; line-height: 1.55; letter-spacing: -0.01em;">로컬 코사인 유사도 벡터 검색 기술을 활용해 0.001초 만에 최적의 관련 지침을 선별합니다.</div>
-                </div>
+        <div style="max-width: 900px; margin: 40px auto; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02); border: 1px solid #e2e8f0; overflow: hidden; text-align: left;">
+            <div style="background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%); color: white; padding: 48px 40px; position: relative; overflow: hidden;">
+                <span style="display: inline-block; background: rgba(255, 255, 255, 0.15); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 16px; text-transform: uppercase;">ADMIN RAG SYSTEM</span>
+                <h1 style="font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; margin-top: 0; color: white;">🏛️ 교육행정 지능형 RAG 시스템</h1>
+                <p style="font-size: 1.05rem; opacity: 0.9; max-width: 680px; font-weight: 400; margin: 0; line-height: 1.55;">수만 페이지의 교육청 지침서 중 필요한 내용을 실시간 검색하여 가장 안전하고 똑똑하게 답변하는 스마트 어시스턴트입니다.</p>
             </div>
-            <div style="margin-top: 45px; font-size: 0.92rem; color: #94a3b8; font-weight: 600; letter-spacing: -0.01em;">
-                ⬅️ 좌측의 <span style="color: #1e60ff;">[ACTIVE CHANNELS]</span> 업무 카드 중 하나를 선택해 대화를 시작해 보세요.
+            <div style="padding: 40px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="border: 1px solid #e2e8f0; padding: 24px; border-radius: 10px; background: #ffffff; transition: all 0.25s ease;">
+                        <span style="font-size: 1.8rem; margin-bottom: 12px; display: inline-block;">☁️</span>
+                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-top: 0; margin-bottom: 8px; color: #0f172a;">클라우드 인프라 최적화</h3>
+                        <p style="font-size: 0.88rem; color: #475569; margin: 0; line-height: 1.55;">외부 유출 우려가 없는 공개 행정 지침 데이터의 특성을 활용, 로컬 FAISS 인덱싱 기술과 구글 Gemini API의 연산력을 결합한 고속·고효율 하이브리드 구조</p>
+                    </div>
+                    <div style="border: 1px solid #e2e8f0; padding: 24px; border-radius: 10px; background: #ffffff; transition: all 0.25s ease;">
+                        <span style="font-size: 1.8rem; margin-bottom: 12px; display: inline-block;">⚡</span>
+                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-top: 0; margin-bottom: 8px; color: #0f172a;">초고속 시맨틱 검색</h3>
+                        <p style="font-size: 0.88rem; color: #475569; margin: 0; line-height: 1.55;">로컬 코사인 유사도 벡터 검색 기술을 활용해 0.001초 만에 최적의 관련 지침을 선별하고 Reranking 기술로 최신 지침을 우선 노출합니다.</p>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 16px; padding: 20px; border-radius: 10px; border-left: 4px solid #3b82f6; font-size: 0.9rem; margin-top: 30px; background-color: #eff6ff; color: #1e40af;">
+                    <span style="font-size: 1.25rem; flex-shrink: 0; line-height: 1;">💡</span>
+                    <div>
+                        <strong>시작 가이드</strong>
+                        <p style="margin: 4px 0 0 0; line-height: 1.5;">좌측의 <span style="font-weight: 700; color: #1e60ff;">[ACTIVE CHANNELS]</span> 업무 카드 중 하나를 선택해 대화를 시작해 보세요. 카테고리가 활성화되면 해당 분야의 지침서 다운로드도 제공됩니다.</p>
+                    </div>
+                </div>
             </div>
         </div>
     """, unsafe_allow_html=True)

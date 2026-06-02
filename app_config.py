@@ -320,16 +320,16 @@ GLOBAL_CSS = """
     /* 대화 카드형 스타일 및 Pretendard 최적화 */
     [data-testid="stChatMessage"] {
         background-color: #ffffff !important;
-        border: 1px solid #f1f5f9 !important;
-        border-radius: 20px !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 16px !important;
         padding: 24px 28px !important;
         margin-bottom: 18px !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.015) !important;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.02), 0 1px 3px rgba(15, 23, 42, 0.01) !important;
         transition: all 0.25s ease !important;
     }
     [data-testid="stChatMessage"]:hover {
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.025) !important;
-        border-color: #e2e8f0 !important;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02) !important;
+        border-color: rgba(30, 96, 255, 0.2) !important;
     }
     
     /* 추천 질문 카드 스타일 - 아이센스토어 시그니처 코발트 블루 매칭 */
