@@ -226,7 +226,7 @@ def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemi
     index = db.index
 
     # 1. 우선순위 파일 식별
-    priority_files = get_priority_files(category, manuals_root)
+    priority_files = get_priority_files(db.category, manuals_root)
     search_k = max(50, k * 2)
 
     if index is None or db.embeddings is None or not len(db.embeddings):

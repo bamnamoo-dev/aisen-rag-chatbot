@@ -6,8 +6,15 @@ echo          RAG Auto Sync Tool (Zero-Touch)
 echo ======================================================
 echo.
 
+:: Detect python command (use 'py' if available, otherwise 'python')
+set PYTHON_CMD=python
+py --version >nul 2>nul
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=py
+)
+
 echo [+] [1/3] Downloading latest law documents (legalize-kr)...
-python legal_downloader.py
+%PYTHON_CMD% legal_downloader.py
 
 if %errorlevel% neq 0 (
     echo.
@@ -17,7 +24,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [+] [2/3] Scanning all folder changes and rebuilding vector DB...
-python build_cache.py
+%PYTHON_CMD% build_cache.py
 
 if %errorlevel% neq 0 (
     echo.
