@@ -5,5 +5,5 @@ python-dotenv
 pymupdf
 numpy
 scikit-learn
-
+faiss-cpu
 requests
