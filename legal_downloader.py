@@ -474,7 +474,8 @@ def url_encode_path(path):
 def search_seoul_ordinances(oc_key: str, query: str) -> list:
     """국가법령정보센터 API에서 자치법규 목록을 검색합니다."""
     encoded_query = urllib.parse.quote(query)
-    url = f"http://www.law.go.kr/DRF/lawSearch.do?OC={oc_key}&target=ordin&type=XML&query={encoded_query}"
+    # display=100을 추가하여 페이지당 최대 100건까지 조회합니다.
+    url = f"https://www.law.go.kr/DRF/lawSearch.do?OC={oc_key}&target=ordin&type=XML&query={encoded_query}&display=100"
     
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -494,7 +495,7 @@ def search_seoul_ordinances(oc_key: str, query: str) -> list:
             mst_elem = law.find("자치법규일련번호")
             name_elem = law.find("자치법규명")
             id_elem = law.find("자치법규ID")
-            org_elem = law.find("지자체명")
+            org_elem = law.find("지자체기관명")  # API 응답 태그가 '지자체명'이 아닌 '지자체기관명'임
             
             mst = mst_elem.text if mst_elem is not None else ""
             name = name_elem.text if name_elem is not None else ""
@@ -516,7 +517,7 @@ def search_seoul_ordinances(oc_key: str, query: str) -> list:
 
 def download_ordinance_content(oc_key: str, mst: str) -> bytes:
     """자치법규 일련번호(MST)를 사용하여 본문 XML 데이터를 다운로드합니다."""
-    url = f"http://www.law.go.kr/DRF/lawService.do?OC={oc_key}&target=ordin&MST={mst}&type=XML"
+    url = f"https://www.law.go.kr/DRF/lawService.do?OC={oc_key}&target=ordin&MST={mst}&type=XML"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=10) as response:
@@ -561,11 +562,18 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
     md_lines.append("\n---\n")
     
     # 2. 본문 조문 분석
-    articles = root.findall(".//조문단위")
+    # 자치법규는 조문 구조가 '<조문>' 컨테이너 밑에 '<조>' 구조로 되어 있습니다.
+    # 기존 법령 XML 구조인 '<조문단위>'도 함께 지원하도록 양쪽 모두 처리합니다.
+    articles = root.findall(".//조")
+    if not articles:
+        articles = root.findall(".//조문단위")
+        
     for art in articles:
         num_elem = art.find("조문번호")
-        title_elem = art.find("조문제목")
-        
+        title_elem = art.find("조제목")
+        if title_elem is None:
+            title_elem = art.find("조문제목")
+            
         num_str = num_elem.text.strip() if num_elem is not None and num_elem.text else ""
         title_str = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
         
@@ -578,7 +586,7 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
         if content_elem is not None and content_elem.text:
             md_lines.append(content_elem.text.strip())
             
-        # 항(①, ② 등) 파싱
+        # 항(①, ② 등) 파싱 (기존 법령 XML 구조 대응)
         for hang in art.findall(".//항"):
             hang_num = hang.find("항번호")
             hang_content = hang.find("항내용")
@@ -609,18 +617,35 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
         md_lines.append("")
         
     # 3. 부칙 분석
-    addendum_title = root.find(".//부칙/부칙공포일자")
-    addendums = root.findall(".//부칙/부칙단위")
-    if addendums:
+    # 자치법규는 부칙 구조가 '<부칙>' 밑에 바로 '<부칙내용>', '<부칙공포일자>' 등이 옵니다.
+    # 기존 법령 구조인 '<부칙단위>'도 함께 지원합니다.
+    buchik_elem = root.find(".//부칙")
+    if buchik_elem is not None:
         md_lines.append("## 부칙")
-        if addendum_title is not None and addendum_title.text:
-            md_lines.append(f"*공포일자: {addendum_title.text.strip()}*\n")
-            
-        for add in addendums:
-            content_elem = add.find("부칙내용")
-            if content_elem is not None and content_elem.text:
-                md_lines.append(content_elem.text.strip())
-                md_lines.append("")
+        
+        # 자치법규의 플랫한 구조 파싱 (부칙내용, 부칙공포일자 등이 직접 자식인 경우)
+        addendum_contents = buchik_elem.findall("부칙내용")
+        if addendum_contents:
+            # 부칙공포일자들과 매칭하여 정보 수집
+            dates = buchik_elem.findall("부칙공포일자")
+            for idx, content in enumerate(addendum_contents):
+                if idx < len(dates) and dates[idx].text:
+                    md_lines.append(f"*공포일자: {dates[idx].text.strip()}*\n")
+                if content.text:
+                    md_lines.append(content.text.strip())
+                    md_lines.append("")
+        else:
+            # 기존 법령 구조 파싱 (부칙단위가 있는 경우)
+            addendum_title = root.find(".//부칙/부칙공포일자")
+            addendums = root.findall(".//부칙/부칙단위")
+            if addendum_title is not None and addendum_title.text:
+                md_lines.append(f"*공포일자: {addendum_title.text.strip()}*\n")
+                
+            for add in addendums:
+                content_elem = add.find("부칙내용")
+                if content_elem is not None and content_elem.text:
+                    md_lines.append(content_elem.text.strip())
+                    md_lines.append("")
                 
     return "\n".join(md_lines)
 

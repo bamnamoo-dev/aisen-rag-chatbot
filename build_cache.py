@@ -116,12 +116,12 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
                 break
             except Exception as e:
                 error_str = str(e)
-                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                    print(f"\n   ⚠️ 트래픽 한도 도달! {retry_delay}초 대기 후 재시도 (시도 {attempt+1}/{max_retries})")
+                if attempt < max_retries - 1:
+                    print(f"\n   ⚠️ API 호출 오류 감지 ({error_str})! {retry_delay}초 대기 후 재시도 (시도 {attempt+1}/{max_retries})")
                     time.sleep(retry_delay)
                     retry_delay *= 1.8
                 else:
-                    print(f"\n   ❌ 구글 임베딩 API 호출 에러: {e}")
+                    print(f"\n   ❌ 구글 임베딩 API 호출 최종 에러: {e}")
                     return []
         
         if not success:
