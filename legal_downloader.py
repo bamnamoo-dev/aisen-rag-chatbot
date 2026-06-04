@@ -2,6 +2,11 @@ import os
 import sys
 import urllib.request
 import urllib.parse
+import xml.etree.ElementTree as ET
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv()
 
 # Reconfigure stdout/stderr encoding to UTF-8 for Windows console support
 if hasattr(sys.stdout, 'reconfigure'):
@@ -466,14 +471,168 @@ def url_encode_path(path):
     encoded_parts = [urllib.parse.quote(part) for part in parts]
     return '/'.join(encoded_parts)
 
+def search_seoul_ordinances(oc_key: str, query: str) -> list:
+    """국가법령정보센터 API에서 자치법규 목록을 검색합니다."""
+    encoded_query = urllib.parse.quote(query)
+    url = f"http://www.law.go.kr/DRF/lawSearch.do?OC={oc_key}&target=ordin&type=XML&query={encoded_query}"
+    
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            xml_data = response.read()
+        
+        root = ET.fromstring(xml_data)
+        
+        # API 인증 오류 등의 메시지 확인
+        cc_msg = root.find("ccMsg")
+        if cc_msg is not None and cc_msg.text:
+            print(f"    ⚠️ 법제처 API 경고 ({query}): {cc_msg.text.strip()}")
+            return []
+            
+        results = []
+        for law in root.findall("law"):
+            mst_elem = law.find("자치법규일련번호")
+            name_elem = law.find("자치법규명")
+            id_elem = law.find("자치법규ID")
+            org_elem = law.find("지자체명")
+            
+            mst = mst_elem.text if mst_elem is not None else ""
+            name = name_elem.text if name_elem is not None else ""
+            law_id = id_elem.text if id_elem is not None else ""
+            org = org_elem.text if org_elem is not None else ""
+            
+            # 지자체명이 '서울특별시교육청'인 경우만 필터링
+            if mst and name and org == "서울특별시교육청":
+                results.append({
+                    "mst": mst,
+                    "name": name,
+                    "id": law_id,
+                    "org": org
+                })
+        return results
+    except Exception as e:
+        print(f"    ❌ 자치법규 검색 중 오류 발생 ({query}): {e}")
+        return []
+
+def download_ordinance_content(oc_key: str, mst: str) -> bytes:
+    """자치법규 일련번호(MST)를 사용하여 본문 XML 데이터를 다운로드합니다."""
+    url = f"http://www.law.go.kr/DRF/lawService.do?OC={oc_key}&target=ordin&MST={mst}&type=XML"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return response.read()
+    except Exception as e:
+        print(f"    ❌ 본문 다운로드 중 오류 발생 (MST: {mst}): {e}")
+        return b""
+
+def parse_ordinance_xml(xml_data: bytes) -> str:
+    """자치법규 XML 데이터를 분석하여 마크다운 포맷으로 변환합니다."""
+    try:
+        root = ET.fromstring(xml_data)
+    except Exception as e:
+        return f"❌ XML 파싱 오류: {e}"
+    
+    # 1. 기본 정보 추출
+    title_elem = root.find(".//자치법규명")
+    title = title_elem.text.strip() if title_elem is not None and title_elem.text else "자치법규"
+    
+    md_lines = []
+    md_lines.append(f"# {title}\n")
+    
+    # 메타정보
+    meta_mapping = {
+        "지자체기관명": "지자체명",
+        "자치법규종류": "종류",
+        "공포일자": "공포일자",
+        "공포번호": "공포번호",
+        "시행일자": "시행일자"
+    }
+    
+    for tag, label in meta_mapping.items():
+        elem = root.find(f".//{tag}")
+        if elem is not None and elem.text:
+            md_lines.append(f"- **{label}**: {elem.text.strip()}")
+            
+    # 출처 추가
+    mst_elem = root.find(".//자치법규일련번호")
+    if mst_elem is not None and mst_elem.text:
+        md_lines.append(f"- **출처**: [국가법령정보센터](https://www.law.go.kr/법령/{urllib.parse.quote(title)})")
+        
+    md_lines.append("\n---\n")
+    
+    # 2. 본문 조문 분석
+    articles = root.findall(".//조문단위")
+    for art in articles:
+        num_elem = art.find("조문번호")
+        title_elem = art.find("조문제목")
+        
+        num_str = num_elem.text.strip() if num_elem is not None and num_elem.text else ""
+        title_str = title_elem.text.strip() if title_elem is not None and title_elem.text else ""
+        
+        md_lines.append(f"## {num_str} {title_str}".strip())
+        
+        # 조문 본문 내용 (단독 조항 내용이 있는 경우)
+        content_elem = art.find("조내용")
+        if content_elem is None:
+            content_elem = art.find("조문내용")
+        if content_elem is not None and content_elem.text:
+            md_lines.append(content_elem.text.strip())
+            
+        # 항(①, ② 등) 파싱
+        for hang in art.findall(".//항"):
+            hang_num = hang.find("항번호")
+            hang_content = hang.find("항내용")
+            h_num = hang_num.text.strip() if hang_num is not None and hang_num.text else ""
+            h_content = hang_content.text.strip() if hang_content is not None and hang_content.text else ""
+            if h_num or h_content:
+                md_lines.append(f"{h_num} {h_content}".strip())
+                
+            # 호(1., 2. 등) 파싱
+            for ho in hang.findall(".//호"):
+                ho_num = ho.find("호번호")
+                ho_content = ho.find("호내용")
+                ho_n = ho_num.text.strip() if ho_num is not None and ho_num.text else ""
+                ho_c = ho_content.text.strip() if ho_content is not None and ho_content.text else ""
+                if ho_n or ho_c:
+                    md_lines.append(f"  {ho_n} {ho_c}".strip())
+                    
+                # 목(가., 나. 등) 파싱
+                for mok in ho.findall(".//목"):
+                    mok_num = mok.find("목번호")
+                    mok_content = mok.find("목내용")
+                    mok_n = mok_num.text.strip() if mok_num is not None and mok_num.text else ""
+                    mok_c = mok_content.text.strip() if mok_content is not None and mok_content.text else ""
+                    if mok_n or mok_c:
+                        md_lines.append(f"    {mok_n} {mok_c}".strip())
+        
+        # 빈 줄 추가
+        md_lines.append("")
+        
+    # 3. 부칙 분석
+    addendum_title = root.find(".//부칙/부칙공포일자")
+    addendums = root.findall(".//부칙/부칙단위")
+    if addendums:
+        md_lines.append("## 부칙")
+        if addendum_title is not None and addendum_title.text:
+            md_lines.append(f"*공포일자: {addendum_title.text.strip()}*\n")
+            
+        for add in addendums:
+            content_elem = add.find("부칙내용")
+            if content_elem is not None and content_elem.text:
+                md_lines.append(content_elem.text.strip())
+                md_lines.append("")
+                
+    return "\n".join(md_lines)
+
 def download_core_laws(dest_dir="manuals/조례규칙"):
     os.makedirs(dest_dir, exist_ok=True)
     print(f"📥 법령/조례 데이터베이스 빌드를 시작합니다... (저장 경로: {dest_dir})\n")
     
     success_count = 0
+    total_expected = len(CORE_TARGETS)
     
     # 1. 중앙 법령 다운로드
-    print("--- [1/2] 🏛️ 중앙 정부 법령/시행령/규칙 다운로드 (GitHub raw) ---")
+    print("--- [1/3] 🏛️ 중앙 정부 법령/시행령/규칙 다운로드 (GitHub raw) ---")
     for target in CORE_TARGETS:
         repo = target["repo"]
         path = target["path"]
@@ -502,9 +661,28 @@ def download_core_laws(dest_dir="manuals/조례규칙"):
         except Exception as e:
             print(f"    ❌ 실패: {name} 다운로드 중 오류 발생 -> {e}")
             
-    # 2. 로컬 자치법규 빌드 및 저장
-    print("\n--- [2/2] ⚖️ 서울시교육청 자치조례 및 회계 실무 훈령/규칙 생성 ---")
-    for local in LOCAL_STATUTES:
+    # 2. 로컬 고유 규정 및 폴백용 자치법규 빌드
+    print("\n--- [2/3] ⚖️ 로컬 고유 규정 및 폴백 자치법규 파일 생성 ---")
+    oc_key = os.getenv("LAW_API_KEY")
+    
+    # 자치법규를 API로 다운로드할 예정인 경우, LOCAL_STATUTES 중 API 대체 대상은 로컬 생성 목록에서 필터링하여 제외
+    if oc_key:
+        print("🔑 LAW_API_KEY 감지됨. 자치법규는 법제처 API를 통해 실시간으로 최신 버전을 내려받습니다.")
+        replaced_filenames = {
+            "서울시교육청_지방공무원_복무조례.md",
+            "서울시_교육비특별회계_재무회계규칙.md",
+            "서울시교육청_교육공무직원_채용조례.md",
+            "서울시교육청_교육공무직원_조례_시행규칙.md",
+            "서울시_공립학교회계_규칙.md"
+        }
+        targets_to_build = [stat for stat in LOCAL_STATUTES if stat["filename"] not in replaced_filenames]
+    else:
+        print("⚠️ LAW_API_KEY가 설정되어 있지 않습니다. 로컬 백업 템플릿(LOCAL_STATUTES)으로 조례/규칙을 생성합니다.")
+        targets_to_build = LOCAL_STATUTES
+        
+    total_expected += len(targets_to_build)
+    
+    for local in targets_to_build:
         filename = local["filename"]
         name = local["name"]
         content = local["content"]
@@ -521,7 +699,48 @@ def download_core_laws(dest_dir="manuals/조례규칙"):
         except Exception as e:
             print(f"    ❌ 실패: {name} 파일 작성 중 오류 발생 -> {e}")
             
-    total_expected = len(CORE_TARGETS) + len(LOCAL_STATUTES)
+    # 3. 실시간 자치법규 API 다운로드
+    print("\n--- [3/3] 📥 법제처 Open API 자치법규 실시간 다운로드 ---")
+    if oc_key:
+        # '서울특별시교육감', '서울특별시교육청' 두 키워드로 검색된 서울시교육청 자치법규 통합 수집
+        search_queries = ["서울특별시교육감", "서울특별시교육청"]
+        collected_laws = {}
+        
+        for q in search_queries:
+            results = search_seoul_ordinances(oc_key, q)
+            print(f" -> '{q}' 검색 결과: 지자체명 '서울특별시교육청' 매칭 {len(results)}건 발견")
+            for item in results:
+                # 자치법규 ID 또는 MST 기준으로 고유 목록 관리
+                collected_laws[item["mst"]] = item
+                
+        law_list = list(collected_laws.values())
+        print(f" 📊 중복 제외 총 {len(law_list)}건의 서울특별시교육청 자치법규 다운로드 시작...")
+        
+        total_expected += len(law_list)
+        
+        for idx, law in enumerate(law_list):
+            safe_name = law["name"].replace(" ", "_").replace("/", "-")
+            filename = f"{safe_name}.md"
+            print(f"   [{idx+1}/{len(law_list)}] '{law['name']}' 다운로드 중...")
+            
+            xml_data = download_ordinance_content(oc_key, law["mst"])
+            if xml_data:
+                markdown_content = parse_ordinance_xml(xml_data)
+                try:
+                    dest_path = os.path.join(dest_dir, filename)
+                    with open(dest_path, "w", encoding="utf-8") as f:
+                        f.write(markdown_content)
+                    file_size_kb = os.path.getsize(dest_path) / 1024
+                    print(f"      ✅ 성공: {filename} ({file_size_kb:.1f} KB) 저장 완료.")
+                    success_count += 1
+                except Exception as e:
+                    print(f"      ❌ 파일 저장 실패: {e}")
+            else:
+                print("      ❌ 본문 데이터를 가져오지 못했습니다.")
+    else:
+        print("⚠️ LAW_API_KEY 누락으로 인해 실시간 자치법규 다운로드 단계를 건너뜁니다.")
+        print("   (참고: 자치법규 자동 갱신을 하려면 .env 파일에 LAW_API_KEY를 추가하고 다시 실행하세요.)")
+        
     print(f"\n🎉 법령/조례 데이터베이스 빌드 완료! (성공: {success_count}/{total_expected}개)")
 
 if __name__ == "__main__":
