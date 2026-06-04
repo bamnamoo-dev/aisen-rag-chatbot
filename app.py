@@ -130,7 +130,7 @@ with tab_col2:
     btn_type = "primary" if is_laws else "secondary"
     if st.button("⚖️ 법령/조례", key="tab_laws", use_container_width=True, type=btn_type):
         st.session_state.current_tab = "법령"
-        st.session_state.selected_category = "조례규칙"
+        st.session_state.selected_category = "자치법규"
         st.session_state.show_manual = False
         st.rerun()
 
@@ -184,7 +184,7 @@ if st.session_state.current_tab == "지침서":
         st.stop()
         
     # 정렬된 카테고리 로딩 (조례규칙 카테고리는 Tab 2 전용이므로 제외)
-    categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d != "조례규칙"]
+    categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
     categories = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
     
     # 사이드바 - 카테고리 버튼 생성 (2열 격자 배치)
@@ -259,7 +259,35 @@ else:
         <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; padding-left: 4px;">ACTIVE LAWS</div>
     """, unsafe_allow_html=True)
     
-    cat_path = os.path.join(manuals_root, "조례규칙")
+    # 상위법령 / 자치법규 선택 버튼 (2열 구조)
+    law_cats = ["상위법령", "자치법규"]
+    law_col1, law_col2 = st.sidebar.columns(2)
+    
+    # selected_category 검증 및 세팅 보장
+    if st.session_state.selected_category not in law_cats:
+        st.session_state.selected_category = "자치법규"
+        
+    active_law_cat = st.session_state.selected_category
+    
+    with law_col1:
+        is_active_laws = active_law_cat == "상위법령"
+        btn_type_laws = "primary" if is_active_laws else "secondary"
+        if st.button("⚖️ 상위법령", key="btn_law_cat_laws", use_container_width=True, type=btn_type_laws):
+            st.session_state.selected_category = "상위법령"
+            st.session_state.legal_messages = []
+            if "chat" in st.session_state: del st.session_state.chat
+            st.rerun()
+            
+    with law_col2:
+        is_active_ord = active_law_cat == "자치법규"
+        btn_type_ord = "primary" if is_active_ord else "secondary"
+        if st.button("🏛️ 자치법규", key="btn_law_cat_ord", use_container_width=True, type=btn_type_ord):
+            st.session_state.selected_category = "자치법규"
+            st.session_state.legal_messages = []
+            if "chat" in st.session_state: del st.session_state.chat
+            st.rerun()
+    
+    cat_path = os.path.join(manuals_root, active_law_cat)
     files = []
     if os.path.exists(cat_path):
         files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith(('.pdf', '.md'))])
@@ -267,7 +295,7 @@ else:
     with st.sidebar.container():
         st.markdown("<div class='file-container'>", unsafe_allow_html=True)
         if files:
-            st.markdown("<div style='font-size:0.85rem; font-weight:600; margin-bottom:8px;'>⚖️ 검색 가능한 핵심 법령/조례</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:0.85rem; font-weight:600; margin-bottom:8px;'>📥 {active_law_cat} 문서 다운로드</div>", unsafe_allow_html=True)
             for f in files:
                 f_path = os.path.join(cat_path, f)
                 display_name = f[:-3] if f.lower().endswith('.md') else f
@@ -280,7 +308,7 @@ else:
                     use_container_width=True
                 )
         else:
-            st.markdown("<div style='font-size:0.8rem; color:#64748b;'>검색 가능한 조례/규칙 파일이 로컬 폴더에 없습니다.</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:0.8rem; color:#64748b;'>검색 가능한 {active_law_cat} 파일이 로컬 폴더에 없습니다.</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 # 사이드바 상태 컨테이너 및 면책 조항 정의
@@ -361,11 +389,13 @@ if selected_category:
             </div>
         """, unsafe_allow_html=True)
     else:
+        header_title = "⚖️ 국가 상위 법령 검색" if selected_category == "상위법령" else "🏛️ 서울시교육청 자치법규 검색"
+        header_desc = "학교 행정의 기준이 되는 주요 중앙 부처 법률·시행령·시행규칙을 검색합니다." if selected_category == "상위법령" else "서울특별시교육청에서 공포한 핵심 조례·시행규칙·규정을 검색합니다."
         st.markdown(f"""
             <div style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); color: white; padding: 24px 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); margin-bottom: 30px; position: relative; overflow: hidden; text-align: left;">
                 <span style="display: inline-block; background: rgba(255, 255, 255, 0.15); padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; text-transform: uppercase;">LEGAL SEARCH ENGINE</span>
-                <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px 0; color: white;">⚖️ 교육행정 법령 및 조례 검색</h1>
-                <p style="font-size: 0.9rem; opacity: 0.9; margin: 0; font-weight: 400;">학교 행정과 밀접한 핵심 상위 법령 및 서울시교육청 조례 규칙 원문 검색을 지원합니다.</p>
+                <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px 0; color: white;">{header_title}</h1>
+                <p style="font-size: 0.9rem; opacity: 0.9; margin: 0; font-weight: 400;">{header_desc}</p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -387,7 +417,11 @@ if selected_category:
         prompt = st.session_state.pending_prompt
         del st.session_state.pending_prompt
     else:
-        input_placeholder = f"{selected_category} 업무에 대해 질문해 주세요." if st.session_state.current_tab == "지침서" else "궁금하신 서울시교육청 관련 조례 및 법령에 대해 질문해 주세요. (예: 공무원 복무 조례상 특별휴가)"
+        if st.session_state.current_tab == "지침서":
+            input_placeholder = f"{selected_category} 업무에 대해 질문해 주세요."
+        else:
+            law_example = "지방공무원법상 직위해제" if selected_category == "상위법령" else "공무원 복무 조례상 특별휴가"
+            input_placeholder = f"궁금하신 {selected_category}에 대해 질문해 주세요. (예: {law_example})"
         prompt = st.chat_input(input_placeholder)
 
     if prompt:

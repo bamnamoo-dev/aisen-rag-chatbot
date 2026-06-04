@@ -471,6 +471,25 @@ def url_encode_path(path):
     encoded_parts = [urllib.parse.quote(part) for part in parts]
     return '/'.join(encoded_parts)
 
+def make_request_with_retry(url: str, timeout: int = 15, max_retries: int = 4, initial_delay: float = 2.0) -> bytes:
+    """네트워크나 SSL 연결 불안정 대응을 위해 재시도 로직이 가미된 HTTP 요청 래퍼입니다."""
+    import time
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    delay = initial_delay
+    
+    for attempt in range(max_retries):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                return response.read()
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"    ⚠️ 네트워크/SSL 연결 오류 감지 ({e}). {delay:.1f}초 후 재시도 (시도 {attempt+1}/{max_retries})")
+                time.sleep(delay)
+                delay *= 1.8
+            else:
+                raise e
+    return b""
+
 def search_seoul_ordinances(oc_key: str, query: str) -> list:
     """국가법령정보센터 API에서 자치법규 목록을 검색합니다."""
     encoded_query = urllib.parse.quote(query)
@@ -478,10 +497,7 @@ def search_seoul_ordinances(oc_key: str, query: str) -> list:
     url = f"https://www.law.go.kr/DRF/lawSearch.do?OC={oc_key}&target=ordin&type=XML&query={encoded_query}&display=100"
     
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            xml_data = response.read()
-        
+        xml_data = make_request_with_retry(url)
         root = ET.fromstring(xml_data)
         
         # API 인증 오류 등의 메시지 확인
@@ -496,11 +512,15 @@ def search_seoul_ordinances(oc_key: str, query: str) -> list:
             name_elem = law.find("자치법규명")
             id_elem = law.find("자치법규ID")
             org_elem = law.find("지자체기관명")  # API 응답 태그가 '지자체명'이 아닌 '지자체기관명'임
+            prom_date_elem = law.find("공포일자")
+            prom_num_elem = law.find("공포번호")
             
             mst = mst_elem.text if mst_elem is not None else ""
             name = name_elem.text if name_elem is not None else ""
             law_id = id_elem.text if id_elem is not None else ""
             org = org_elem.text if org_elem is not None else ""
+            prom_date = prom_date_elem.text if prom_date_elem is not None else ""
+            prom_num = prom_num_elem.text if prom_num_elem is not None else ""
             
             # 지자체명이 '서울특별시교육청'인 경우만 필터링
             if mst and name and org == "서울특별시교육청":
@@ -508,7 +528,9 @@ def search_seoul_ordinances(oc_key: str, query: str) -> list:
                     "mst": mst,
                     "name": name,
                     "id": law_id,
-                    "org": org
+                    "org": org,
+                    "prom_date": prom_date,
+                    "prom_num": prom_num
                 })
         return results
     except Exception as e:
@@ -519,9 +541,7 @@ def download_ordinance_content(oc_key: str, mst: str) -> bytes:
     """자치법규 일련번호(MST)를 사용하여 본문 XML 데이터를 다운로드합니다."""
     url = f"https://www.law.go.kr/DRF/lawService.do?OC={oc_key}&target=ordin&MST={mst}&type=XML"
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            return response.read()
+        return make_request_with_retry(url)
     except Exception as e:
         print(f"    ❌ 본문 다운로드 중 오류 발생 (MST: {mst}): {e}")
         return b""
@@ -649,14 +669,15 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
                 
     return "\n".join(md_lines)
 
-def download_core_laws(dest_dir="manuals/조례규칙"):
-    os.makedirs(dest_dir, exist_ok=True)
-    print(f"📥 법령/조례 데이터베이스 빌드를 시작합니다... (저장 경로: {dest_dir})\n")
+def download_core_laws(laws_dir="manuals/상위법령", ordinances_dir="manuals/자치법규"):
+    os.makedirs(laws_dir, exist_ok=True)
+    os.makedirs(ordinances_dir, exist_ok=True)
+    print(f"📥 법령/조례 데이터베이스 빌드를 시작합니다...\n   - 상위법령 저장소: {laws_dir}\n   - 자치법규 저장소: {ordinances_dir}\n")
     
     success_count = 0
     total_expected = len(CORE_TARGETS)
     
-    # 1. 중앙 법령 다운로드
+    # 1. 중앙 법령 다운로드 -> laws_dir 에 저장
     print("--- [1/3] 🏛️ 중앙 정부 법령/시행령/규칙 다운로드 (GitHub raw) ---")
     for target in CORE_TARGETS:
         repo = target["repo"]
@@ -676,7 +697,7 @@ def download_core_laws(dest_dir="manuals/조례규칙"):
             with urllib.request.urlopen(req, timeout=10) as response:
                 content = response.read().decode('utf-8')
                 
-            dest_path = os.path.join(dest_dir, filename)
+            dest_path = os.path.join(laws_dir, filename)
             with open(dest_path, "w", encoding="utf-8") as f:
                 f.write(content)
                 
@@ -686,7 +707,7 @@ def download_core_laws(dest_dir="manuals/조례규칙"):
         except Exception as e:
             print(f"    ❌ 실패: {name} 다운로드 중 오류 발생 -> {e}")
             
-    # 2. 로컬 고유 규정 및 폴백용 자치법규 빌드
+    # 2. 로컬 고유 규정 및 폴백용 자치법규 빌드 -> 파일명에 따라 분기하여 저장
     print("\n--- [2/3] ⚖️ 로컬 고유 규정 및 폴백 자치법규 파일 생성 ---")
     oc_key = os.getenv("LAW_API_KEY")
     
@@ -712,9 +733,12 @@ def download_core_laws(dest_dir="manuals/조례규칙"):
         name = local["name"]
         content = local["content"]
         
-        print(f" -> '{name}' 데이터 생성 중...")
+        # 파일명에 '서울'이 들어가면 자치법규 폴더로, 그렇지 않으면 상위법령 폴더로 분기
+        target_dir = ordinances_dir if "서울" in filename else laws_dir
+        
+        print(f" -> '{name}' 데이터 생성 중... (대상 폴더: {target_dir})")
         try:
-            dest_path = os.path.join(dest_dir, filename)
+            dest_path = os.path.join(target_dir, filename)
             with open(dest_path, "w", encoding="utf-8") as f:
                 f.write(content.strip())
                 
@@ -724,7 +748,7 @@ def download_core_laws(dest_dir="manuals/조례규칙"):
         except Exception as e:
             print(f"    ❌ 실패: {name} 파일 작성 중 오류 발생 -> {e}")
             
-    # 3. 실시간 자치법규 API 다운로드
+    # 3. 실시간 자치법규 API 다운로드 -> ordinances_dir 에 저장
     print("\n--- [3/3] 📥 법제처 Open API 자치법규 실시간 다운로드 ---")
     if oc_key:
         # '서울특별시교육감', '서울특별시교육청' 두 키워드로 검색된 서울시교육청 자치법규 통합 수집
@@ -746,13 +770,31 @@ def download_core_laws(dest_dir="manuals/조례규칙"):
         for idx, law in enumerate(law_list):
             safe_name = law["name"].replace(" ", "_").replace("/", "-")
             filename = f"{safe_name}.md"
+            dest_path = os.path.join(ordinances_dir, filename)
+            
+            # 파일이 이미 존재하면 파일 첫 부분을 읽어 공포일자, 공포번호가 최신 정보와 일치하는지 검사
+            is_up_to_date = False
+            if os.path.exists(dest_path) and law.get("prom_date") and law.get("prom_num"):
+                try:
+                    with open(dest_path, "r", encoding="utf-8") as f:
+                        header_lines = [f.readline() for _ in range(12)]
+                        header_text = "".join(header_lines)
+                        if f"공포일자: {law['prom_date']}" in header_text and f"공포번호: {law['prom_num']}" in header_text:
+                            is_up_to_date = True
+                except Exception:
+                    pass
+            
+            if is_up_to_date:
+                print(f"   [{idx+1}/{len(law_list)}] '{law['name']}' (캐시가 최신 상태입니다. 다운로드 건너뜀)")
+                success_count += 1
+                continue
+                
             print(f"   [{idx+1}/{len(law_list)}] '{law['name']}' 다운로드 중...")
             
             xml_data = download_ordinance_content(oc_key, law["mst"])
             if xml_data:
                 markdown_content = parse_ordinance_xml(xml_data)
                 try:
-                    dest_path = os.path.join(dest_dir, filename)
                     with open(dest_path, "w", encoding="utf-8") as f:
                         f.write(markdown_content)
                     file_size_kb = os.path.getsize(dest_path) / 1024
