@@ -85,8 +85,6 @@ def create_embeddings(chunks, client, model_name="gemini-embedding-2"):
         from google.genai import types
         contents_batch = [types.Content(parts=[types.Part.from_text(text=t)]) for t in batch]
 
-
-        
         # 429 Too Many Requests 대비 지능형 재시도 루프 (Exponential Backoff)
         max_retries = 10
         retry_delay = 5.0  # 초기 대기시간 5초
@@ -217,6 +215,23 @@ def get_priority_files(category, manuals_root="manuals"):
         
     return priority_files
 
+def get_filename_from_metadata(metadata):
+    """청크 메타데이터로부터 순수 파일명을 파싱하여 정규화 및 정밀 매칭을 돕는 헬퍼 함수"""
+    if not metadata:
+        return ""
+    cleaned = metadata.strip()
+    # 대괄호로 둘러싸인 형태 ([파일명 - ...p]) 대응
+    if cleaned.startswith('['):
+        cleaned = cleaned[1:]
+    if cleaned.endswith(']'):
+        cleaned = cleaned[:-1]
+    
+    # " - "로 구분된 첫 번째 항목(파일명) 분리
+    parts = cleaned.split(" - ")
+    if parts:
+        return parts[0].strip()
+    return cleaned
+
 def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemini-embedding-2", manuals_root="manuals"):
     """질문과 관련 있는 지침 조각을 FAISS로 검색하고 유사도 임계치 필터링, 최신 파일 가중치(Boosting) 부여, 맥락 보강 및 Reranking"""
     if db is None:
@@ -230,12 +245,18 @@ def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemi
     search_k = max(50, k * 2)
 
     if index is None or db.embeddings is None or not len(db.embeddings):
-        # 키워드 기반 검색 백업
+        # 키워드 기반 검색 백업 (API 미설정 혹은 임베딩 비어있을 때)
         query_words = query.split()
         scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
         top_indices = np.argsort(scores)[-search_k:][::-1]
         valid_indices = [idx for idx in top_indices if scores[idx] > 0]
-        scores_filtered = [float(scores[idx]) for idx in valid_indices]
+        
+        # 매칭 단어 개수 비율 기반 [0.4, 0.8] 범위 동적 스케일링
+        total_words = len(query_words)
+        if total_words > 0:
+            scores_filtered = [0.4 + (float(scores[idx]) / total_words) * 0.4 for idx in valid_indices]
+        else:
+            scores_filtered = [0.4 for _ in valid_indices]
     else:
         # Google API를 이용한 단일 쿼리 고속 임베딩
         try:
@@ -267,24 +288,37 @@ def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemi
             scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
             top_indices = np.argsort(scores)[-search_k:][::-1]
             valid_indices = [idx for idx in top_indices if scores[idx] > 0]
-            scores_filtered = [0.4 for idx in valid_indices] # 백업 기본 유사도 부여
+            
+            # 매칭 단어 개수 비율 기반 [0.4, 0.8] 범위 동적 스케일링으로 일괄 고정(0.4) 방지 및 정렬 순서 유지
+            total_words = len(query_words)
+            if total_words > 0:
+                scores_filtered = [0.4 + (float(scores[idx]) / total_words) * 0.4 for idx in valid_indices]
+            else:
+                scores_filtered = [0.4 for _ in valid_indices]
     
     results = []
     for idx, score in zip(valid_indices, scores_filtered):
         start_idx = max(0, idx - 1)
         end_idx = min(len(chunks), idx + 2)
         
+        current_metadata = chunks[idx]["metadata"]
+        current_filename = get_filename_from_metadata(current_metadata)
+        
         context_text = ""
         for i in range(start_idx, end_idx):
             prefix = "▶ " if i == idx else "  "
-            context_text += f"{prefix}{chunks[i]['content']}\n"
+            i_metadata = chunks[i]["metadata"]
+            i_filename = get_filename_from_metadata(i_metadata)
             
-        metadata = chunks[idx]["metadata"]
-        
+            # 파일 경계선에서의 맥락 오염(Context Pollution) 방지: 같은 파일의 청크일 때만 앞뒤 맥락 보강에 포함
+            if i == idx or i_filename == current_filename:
+                context_text += f"{prefix}{chunks[i]['content']}\n"
+                
         # 최신 지침 가중치 룰 (Score Boosting) 적용
         is_priority = False
         for p_file in priority_files:
-            if metadata.startswith(p_file):
+            # metadata.startswith(p_file) 대신 p_file in metadata 및 정밀 파일명 일치를 사용해 버그 해결
+            if p_file in current_metadata or p_file in current_filename:
                 is_priority = True
                 break
                 
@@ -295,7 +329,7 @@ def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemi
         results.append({
             "content_llm": chunks[idx]["content"].strip(),
             "content_ui": context_text.strip(),
-            "metadata": metadata,
+            "metadata": current_metadata,
             "score": final_score,
             "original_score": score,
             "is_priority": is_priority

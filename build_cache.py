@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 sys.modules['streamlit'] = MagicMock()
 
 # Now we can safely import our classes and functions
-from core.parser import RecursiveCharacterTextSplitter, table_to_markdown
+from core.parser import RecursiveCharacterTextSplitter, table_to_markdown, parse_single_pdf, parse_single_md
 from core.vector_db import LocalVectorDB, get_folder_hash
 import fitz
 
@@ -39,40 +39,11 @@ def get_pdf_chunks_cli(folder_path):
         print(f"   -> [{f_idx+1}/{total_files}] 분석 중: {filename}")
         try:
             if filename.lower().endswith('.pdf'):
-                doc = fitz.open(file_path)
-                for page_num, page in enumerate(doc, 1):
-                    text = page.get_text().strip()
-                    try:
-                        tables = page.find_tables()
-                        table_texts = []
-                        for tab in tables:
-                            tab_data = tab.extract()
-                            md = table_to_markdown(tab_data)
-                            if md:
-                                table_texts.append(md)
-                        if table_texts:
-                            text += "\n\n[표 데이터]\n" + "\n\n".join(table_texts)
-                    except Exception:
-                        pass
-                    
-                    if text:
-                        page_chunks = splitter.split_text(text)
-                        for c_idx, c_text in enumerate(page_chunks):
-                            chunks.append({
-                                "content": c_text.strip(),
-                                "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
-                            })
-                doc.close()
+                file_chunks = parse_single_pdf(file_path, filename, splitter)
+                chunks.extend(file_chunks)
             elif filename.lower().endswith('.md'):
-                with open(file_path, "r", encoding="utf-8") as f:
-                    text = f.read().strip()
-                if text:
-                    page_chunks = splitter.split_text(text)
-                    for c_idx, c_text in enumerate(page_chunks):
-                        chunks.append({
-                            "content": c_text.strip(),
-                            "metadata": f"{filename} - (분할 {c_idx+1})"
-                        })
+                file_chunks = parse_single_md(file_path, filename, splitter)
+                chunks.extend(file_chunks)
         except Exception as e:
             print(f"   ❌ {filename} 로드 실패: {e}")
             

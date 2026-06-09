@@ -28,6 +28,8 @@
 4. **PyMuPDF Engine**: 기존 라이브러리 대비 10배 이상 빠른 PDF 로딩 및 텍스트 파싱.
 5. **Binary Caching**: PDF 다운로드 데이터의 메모리 캐싱으로 UI 반응 속도 극대화.
 6. **Latest Guideline Score Boosting**: 신구 지침 혼용 시 최신 정보를 우선하기 위한 파일명 키워드/시간 기반 최신 지침 가중치 룰(Score Boosting +0.1) 및 Reranking 로직 탑재.
+7. **Atomic Text-Table Separation & Header Replication**: 표 영역 바운딩 박스를 통해 일반 본문과 표 텍스트 중복을 원천 차단하고, 청크 분할 시 표 헤더를 유기적으로 자동 주입하여 환각을 최소화.
+8. **Context Pollution Prevention & Dynamic Fallback Scaling**: 동일 파일 내 청크만 맥락 보조로 결합하여 파일 간 맥락 꼬임(오염)을 제거하고, API 순절 시 키워드 매칭 스코어를 동적 스케일링하여 최상의 관련성 유지.
 
 ### 5. 운영 지표 (Target Metrics)
 - **동시 접속**: 무료 티어 기준 하루 약 100~500명 이상의 질문 처리 가능 (RAG 최적화 적용 결과).
@@ -35,4 +37,4 @@
 - **정확도**: 참고한 실제 파일명과 페이지 번호를 답변 하단에 100% 명시.
 
 ---
-*Last Updated: 2026-06-01*
+*Last Updated: 2026-06-09*

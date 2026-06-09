@@ -116,7 +116,8 @@ def table_to_markdown(table_data):
     
     cleaned_table = []
     for row in table_data:
-        cleaned_row = [str(cell or "").replace("\n", " ").strip() for cell in row]
+        # ESCAPE PIPE '|' to '\|' inside table cells to protect column boundaries
+        cleaned_row = [str(cell or "").replace("\n", " ").replace("|", "\\|").strip() for cell in row]
         cleaned_row += [""] * (max_cols - len(cleaned_row))
         cleaned_table.append(cleaned_row)
     
@@ -125,6 +126,158 @@ def table_to_markdown(table_data):
     for row in cleaned_table[1:]:
         markdown_lines.append("| " + " | ".join(row) + " |")
     return "\n".join(markdown_lines)
+
+
+def split_table_markdown(table_md, chunk_size=700, chunk_overlap=80):
+    """표 데이터 청크가 chunk_size를 초과하여 쪼개질 경우,
+    모든 분할 조각의 상단에 헤더 행(| 항목 | 내용 |) 및 구분선 행을 주입하여 분할"""
+    lines = [line.strip() for line in table_md.strip().split("\n") if line.strip()]
+    if len(lines) < 2:
+        return [table_md]
+        
+    header_line = lines[0]
+    separator_line = lines[1]
+    data_lines = lines[2:]
+    
+    if not data_lines:
+        return [table_md]
+        
+    # 만약 테이블 형태가 아니라면 일반 텍스트 분할 방식과 유사하게 대처
+    if not (header_line.startswith("|") and header_line.endswith("|")):
+        return [table_md]
+        
+    chunks = []
+    header_part = f"{header_line}\n{separator_line}\n"
+    header_len = len(header_part)
+    
+    current_chunk_lines = [header_line, separator_line]
+    current_len = header_len
+    
+    for row in data_lines:
+        row_len = len(row) + 1  # +1 for newline
+        # 신규 행 추가 시 크기 초과 여부 확인
+        if current_len + row_len > chunk_size:
+            if len(current_chunk_lines) > 2:
+                chunks.append("\n".join(current_chunk_lines))
+                
+                # 중첩(Overlap)을 적용하기 위해 이전 청크의 일부 행 가져오기
+                overlap_lines = []
+                overlap_len = 0
+                data_in_chunk = current_chunk_lines[2:]
+                for prev_row in reversed(data_in_chunk):
+                    if overlap_len + len(prev_row) + 1 <= chunk_overlap:
+                        overlap_lines.insert(0, prev_row)
+                        overlap_len += len(prev_row) + 1
+                    else:
+                        break
+                        
+                current_chunk_lines = [header_line, separator_line] + overlap_lines + [row]
+                current_len = header_len + overlap_len + row_len
+            else:
+                # 단일 행의 길이가 한도를 초과할 경우 예외 처리
+                current_chunk_lines.append(row)
+                current_len += row_len
+        else:
+            current_chunk_lines.append(row)
+            current_len += row_len
+            
+    if len(current_chunk_lines) > 2:
+        chunks.append("\n".join(current_chunk_lines))
+        
+    return chunks
+
+
+def parse_single_pdf(file_path, filename, splitter):
+    """단일 PDF 파일을 페이지별로 분석하여 일반 텍스트와 표 텍스트를 독립된 청크로 분리 추출"""
+    chunks = []
+    doc = fitz.open(file_path)
+    
+    for page_num, page in enumerate(doc, 1):
+        tables = []
+        try:
+            tables = list(page.find_tables())
+        except Exception:
+            pass
+            
+        valid_table_rects = []
+        table_texts = []
+        for tab in tables:
+            try:
+                tab_data = tab.extract()
+                md = table_to_markdown(tab_data)
+                if md:
+                    table_texts.append(md)
+                    valid_table_rects.append(fitz.Rect(tab.bbox))
+            except Exception:
+                pass
+                
+        # 1. 일반 본문 텍스트 추출 (유효한 표 영역을 완전히 제외)
+        try:
+            blocks = page.get_text("blocks")
+            non_table_blocks = []
+            for b in blocks:
+                rect = fitz.Rect(b[0], b[1], b[2], b[3])
+                is_table = False
+                for tr in valid_table_rects:
+                    intersect = rect & tr
+                    if not intersect.is_empty:
+                        rect_area = rect.width * rect.height
+                        intersect_area = intersect.width * intersect.height
+                        if rect_area > 0 and (intersect_area / rect_area) > 0.5:
+                            is_table = True
+                            break
+                if not is_table:
+                    non_table_blocks.append(b[4].strip())
+            text = "\n\n".join([tb for tb in non_table_blocks if tb])
+        except Exception:
+            # 에러 발생 시 원본 전체 텍스트 추출로 백업
+            text = page.get_text().strip()
+            
+        page_chunks = []
+        
+        # 2. 일반 텍스트 분할 및 임포트
+        if text.strip():
+            page_chunks.extend(splitter.split_text(text))
+            
+        # 3. 표 데이터 분할 (독립된 원자적 청크로 분리 추출 + 헤더 복원 복사 적용)
+        for md in table_texts:
+            split_mds = split_table_markdown(md, chunk_size=splitter.chunk_size, chunk_overlap=splitter.chunk_overlap)
+            page_chunks.extend(split_mds)
+            
+        # 4. 무의미한 특수문자 청크 필터링 및 리스트 적재
+        for c_idx, c_text in enumerate(page_chunks):
+            content_stripped = c_text.strip()
+            non_ws = "".join(content_stripped.split())
+            if non_ws:
+                table_char_count = non_ws.count('|') + non_ws.count('-')
+                letters_count = len([char for char in non_ws if char.isalnum()])
+                # 청크의 50% 이상이 표 기호이고 한글/영문/숫자 글자수가 15자 미만이면 필터링
+                if len(non_ws) > 0 and (table_char_count / len(non_ws) > 0.5) and letters_count < 15:
+                    continue
+                    
+            chunks.append({
+                "content": content_stripped,
+                "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
+            })
+            
+    doc.close()
+    return chunks
+
+
+def parse_single_md(file_path, filename, splitter):
+    """단일 Markdown 파일을 읽어 청크로 분할"""
+    chunks = []
+    with open(file_path, "r", encoding="utf-8") as f:
+        text = f.read().strip()
+    if text:
+        page_chunks = splitter.split_text(text)
+        for c_idx, c_text in enumerate(page_chunks):
+            content_stripped = c_text.strip()
+            chunks.append({
+                "content": content_stripped,
+                "metadata": f"{filename} - (분할 {c_idx+1})"
+            })
+    return chunks
 
 
 def get_pdf_chunks(folder_path):
@@ -136,7 +289,7 @@ def get_pdf_chunks(folder_path):
     files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('.pdf', '.md'))])
     splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=80)
     
-    # 분석 시 시각화 요소 도입
+    # 분석 시 Streamlit 시각화 요소 도입
     progress_bar = st.progress(0)
     status_text = st.empty()
     
@@ -151,54 +304,11 @@ def get_pdf_chunks(folder_path):
         status_text.markdown(f"📄 **문서 분석 중 ({f_idx+1}/{total_files}):** `{filename}`")
         try:
             if filename.lower().endswith('.pdf'):
-                doc = fitz.open(file_path)
-                for page_num, page in enumerate(doc, 1):
-                    # 1. 일반 텍스트 추출
-                    text = page.get_text().strip()
-                    
-                    # 2. 표 데이터 추출 및 마크다운 보존
-                    try:
-                        tables = page.find_tables()
-                        table_texts = []
-                        for tab in tables:
-                            tab_data = tab.extract()
-                            md = table_to_markdown(tab_data)
-                            if md:
-                                table_texts.append(md)
-                        if table_texts:
-                            text += "\n\n[표 데이터]\n" + "\n\n".join(table_texts)
-                    except Exception:
-                        pass
-                    
-                    if text:
-                        page_chunks = splitter.split_text(text)
-                        for c_idx, c_text in enumerate(page_chunks):
-                            content_stripped = c_text.strip()
-                            # 무의미하게 표 기호(|)와 공백만 가득한 청크 필터링
-                            non_ws = "".join(content_stripped.split())
-                            if non_ws:
-                                table_char_count = non_ws.count('|') + non_ws.count('-')
-                                letters_count = len([char for char in non_ws if char.isalnum()])
-                                # 청크의 50% 이상이 표 기호이고, 실제 한글/영어/숫자 글자수가 15자 미만이면 무시
-                                if len(non_ws) > 0 and (table_char_count / len(non_ws) > 0.5) and letters_count < 15:
-                                    continue
-                                    
-                            chunks.append({
-                                "content": content_stripped,
-                                "metadata": f"{filename} - {page_num}p (분할 {c_idx+1})"
-                            })
-                doc.close()
+                file_chunks = parse_single_pdf(file_path, filename, splitter)
+                chunks.extend(file_chunks)
             elif filename.lower().endswith('.md'):
-                with open(file_path, "r", encoding="utf-8") as f:
-                    text = f.read().strip()
-                if text:
-                    page_chunks = splitter.split_text(text)
-                    for c_idx, c_text in enumerate(page_chunks):
-                        content_stripped = c_text.strip()
-                        chunks.append({
-                            "content": content_stripped,
-                            "metadata": f"{filename} - (분할 {c_idx+1})"
-                        })
+                file_chunks = parse_single_md(file_path, filename, splitter)
+                chunks.extend(file_chunks)
         except Exception as e:
             st.sidebar.error(f"{filename} 로드 실패: {e}")
         progress_bar.progress(int((f_idx + 1) / total_files * 100))
