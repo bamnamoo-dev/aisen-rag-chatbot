@@ -110,27 +110,59 @@ class LocalVectorDB:
             # v1.0 데이터의 경우 "version" 키가 없음
             is_v2 = data.get("version") == "2.0"
             
+            if not is_v2:
+                # v1.0 캐시를 v2.0 포맷으로 즉시 자동 마이그레이션 (임베딩 API 호출 재연산 방지)
+                try:
+                    files_dict = {}
+                    files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('.pdf', '.md'))])
+                    
+                    for f_name in files:
+                        f_path = os.path.join(folder_path, f_name)
+                        try:
+                            mtime = os.path.getmtime(f_path)
+                            size = os.path.getsize(f_path)
+                        except Exception:
+                            mtime = 0.0
+                            size = 0
+                            
+                        f_chunks = []
+                        f_embs_list = []
+                        for idx, chunk in enumerate(data.get("chunks", [])):
+                            chunk_filename = get_filename_from_metadata(chunk["metadata"])
+                            if chunk_filename == f_name:
+                                f_chunks.append(chunk)
+                                if data.get("embeddings") is not None and idx < len(data["embeddings"]):
+                                    f_embs_list.append(data["embeddings"][idx])
+                                    
+                        files_dict[f_name] = {
+                            "mtime": mtime,
+                            "size": size,
+                            "chunks": f_chunks,
+                            "embeddings": np.array(f_embs_list, dtype=np.float32) if f_embs_list else np.array([], dtype=np.float32)
+                        }
+                        
+                    migrated_data = {
+                        "version": "2.0",
+                        "hash": data.get("hash"),
+                        "model_name": data.get("model_name", "gemini-embedding-2"),
+                        "files": files_dict,
+                        "chunks": data.get("chunks", []),
+                        "embeddings": data.get("embeddings")
+                    }
+                    data = migrated_data
+                    is_v2 = True
+                    
+                    # 마이그레이션된 v2 포맷을 즉시 디스크에 영구 저장
+                    with open(cache_file, "wb") as f_out:
+                        pickle.dump(data, f_out)
+                except Exception as migration_e:
+                    st.sidebar.warning(f"⚠️ 구버전 캐시 자동 마이그레이션 실패: {migration_e}")
+            
             # 1. 완벽한 해시 일치 시 즉시 로딩 (변경 없음)
             if data.get("hash") == current_hash and data.get("chunks") is not None:
                 self.chunks = data["chunks"]
                 self.embeddings = data["embeddings"]
-                if is_v2:
-                    self.file_cache = data
-                else:
-                    # v1.0 캐시를 읽었지만 마침 해시가 정확히 일치한다면, 탑레벨 chunks를 가짜 파일명으로 v2 구조화
-                    self.file_cache = {
-                        "version": "2.0",
-                        "hash": current_hash,
-                        "model_name": "gemini-embedding-2",
-                        "files": {
-                            "migrated_v1_backup.pdf": {
-                                "mtime": 0.0,
-                                "size": 0,
-                                "chunks": data["chunks"],
-                                "embeddings": data["embeddings"]
-                            }
-                        }
-                    }
+                self.file_cache = data
                 try:
                     self.build_index()
                 except Exception as idx_e:
