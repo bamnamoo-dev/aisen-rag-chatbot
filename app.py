@@ -900,10 +900,12 @@ def render_qa_content():
                             "unique_chunks": unique_chunks,
                             "recommendations": recommendations
                         })
-                    st.rerun()
                     
                 except Exception as e:
                     st.error(f"오류가 발생했습니다: {e}")
+                    return
+                
+                st.rerun()
     else:
         st.markdown("""
             <div style="max-width: 900px; margin: 40px auto; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02); border: 1px solid #e2e8f0; overflow: hidden; text-align: left;">
