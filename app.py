@@ -443,6 +443,17 @@ if admin_mode:
                 except Exception:
                     pass
             
+            # 폴더 전체 해시로 '최신 동기화 완료' 여부 판별 (파일 개별 해시 대신 폴더 해시 사용)
+            # 이유: Git 체크아웃/legal_downloader 실행 등으로 개별 파일의 mtime이나 내용이
+            # 미세하게 달라져도 폴더 구성(파일명 + 크기) 기반 해시는 변하지 않으므로 신뢰도가 더 높음
+            folder_in_sync = False
+            if has_cache and exist_files and cache_info:
+                _folder_hash = get_folder_hash(manage_path, LOCAL_MODEL_NAME)
+                if (cache_info.get("hash") == _folder_hash and
+                        cache_info.get("version") == "2.0" and
+                        "migrated_v1_backup.pdf" not in cache_info.get("files", {})):
+                    folder_in_sync = True
+            
             if exist_files:
                 for f_name in exist_files:
                     f_path = os.path.join(manage_path, f_name)
@@ -459,24 +470,15 @@ if admin_mode:
                     if cache_info and cache_info.get("version") == "2.0":
                         f_cache = cache_info.get("files", {}).get(f_name)
                         if f_cache:
-                            # 1. 파일 내용의 MD5 해시 비교 (Git 체크아웃으로 인한 수정 시각 차이 극복)
-                            file_hash = get_file_hash(f_path)
-                            cached_hash = f_cache.get("hash")
-                            
-                            if cached_hash:
-                                if cached_hash == file_hash and f_cache.get("size") == f_size:
-                                    chunk_count = len(f_cache.get("chunks", []))
-                                    status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
-                                else:
-                                    status_badge = f"🔄 변경 감지 (재분석 필요) [CH:{cached_hash[:6]} vs FH:{file_hash[:6]}, CS:{f_cache.get('size')} vs FS:{f_size}]"
+                            chunk_count = len(f_cache.get("chunks", []))
+                            if folder_in_sync:
+                                # 폴더 해시 일치 → 이 파일도 최신 상태로 확정
+                                status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
+                            elif chunk_count > 0:
+                                # 캐시에 데이터는 있으나 폴더 해시 불일치 → 재분석 필요
+                                status_badge = "🔄 변경 감지 (재분석 필요)"
                             else:
-                                # 이전 캐시 호환성용 (mtime & size)
-                                if f_cache.get("mtime") == f_mtime and f_cache.get("size") == f_size:
-                                    chunk_count = len(f_cache.get("chunks", []))
-                                    status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
-                                else:
-                                    status_badge = f"🔄 변경 감지 (재분석 필요) [NoCH, CM:{f_cache.get('mtime')} vs FM:{f_mtime}, CS:{f_cache.get('size')} vs FS:{f_size}]"
-                                
+                                status_badge = "➕ 신규 파일 (분석 필요)"
                     col_file, col_size, col_time, col_status, col_action = st.columns([4, 2, 3, 3, 2])
                     with col_file:
                         st.markdown(f"**{f_name}**")
@@ -508,13 +510,7 @@ if admin_mode:
             st.markdown("---")
             st.markdown("#### ⚡ 3. 벡터 DB 증분 빌드 및 캐시 생성")
             
-            needs_build = True
-            if has_cache and exist_files:
-                current_hash = get_folder_hash(manage_path, LOCAL_MODEL_NAME)
-                if cache_info and cache_info.get("hash") == current_hash:
-                    # 캐시가 v2.0 포맷이고, 임시 마이그레이션용 파일이 없는 정식 빌드 상태인 경우에만 needs_build = False
-                    if cache_info.get("version") == "2.0" and "migrated_v1_backup.pdf" not in cache_info.get("files", {}):
-                        needs_build = False
+            needs_build = not folder_in_sync
             
             if needs_build:
                 st.warning("⚠️ 카테고리 내 파일에 변경 사항이 있거나 아직 빌드되지 않았습니다. 분석 빌드가 필요합니다.")
