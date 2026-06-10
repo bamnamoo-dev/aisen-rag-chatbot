@@ -6,7 +6,35 @@ import faiss
 import logging
 import streamlit as st
 import time
+import re
 from core.parser import get_pdf_chunks
+
+def simple_korean_tokenizer(text):
+    """한국어 행정 용어 및 조항 번호 검색 최적화를 위한 경량 정규식 기반 토크나이저"""
+    if not text:
+        return []
+    text = text.lower()
+    # 특수 문자 제거 (법령 표기용 언더바, 대시, 수치 보존)
+    cleaned = re.sub(r'[^a-zA-Z0-9가-힣ㄱ-ㅎㅏ-ㅣ_수-]', ' ', text)
+    words = cleaned.split()
+    
+    tokens = []
+    for w in words:
+        if len(w) >= 2:
+            tokens.append(w)
+            # 어근 추출 (기본 조사 은,는,이,가,을,를,의,에,로,으로,에서,에게,와,과,하고,이다 등 제거)
+            stem = re.sub(r'(은|는|이|가|을|를|의|에|로|으로|에서|에게|와|과|하고|이다|입니다|하나요|인가요)$', '', w)
+            if len(stem) >= 2 and stem != w:
+                tokens.append(stem)
+            # 조항 번호 추출 (예: 제30조 -> 30조, 30)
+            if '조' in w:
+                nums = re.findall(r'\d+', w)
+                for num in nums:
+                    tokens.append(f"{num}조")
+                    tokens.append(num)
+        elif len(w) == 1 and (w.isdigit() or w.isalpha()):
+            tokens.append(w)
+    return tokens
 
 class LocalVectorDB:
     def __init__(self, category):
@@ -14,9 +42,10 @@ class LocalVectorDB:
         self.chunks = []
         self.embeddings = None
         self.index = None
+        self.bm25 = None
 
     def build_index(self):
-        """FAISS 인덱스 빌드 및 코사인 유사도 연산 준비"""
+        """FAISS 인덱스 빌드 및 코사인 유사도 연산 준비, 로컬 BM25 빌드 포함"""
         if self.embeddings is not None and len(self.embeddings) > 0:
             # L2 정규화 (코사인 유사도를 Inner Product로 풀기 위함)
             norms = np.linalg.norm(self.embeddings, axis=1, keepdims=True)
@@ -27,17 +56,46 @@ class LocalVectorDB:
             self.index.add(normalized.astype('float32'))
         else:
             self.index = None
+            
+        # BM25 인덱스 빌드
+        self.build_bm25_index()
+
+    def build_bm25_index(self):
+        """로컬 메모리상에 BM25 인덱스 실시간 생성 (API 호출 없음)"""
+        if self.chunks:
+            try:
+                from rank_bm25 import BM25Okapi
+                tokenized_corpus = [simple_korean_tokenizer(c["content"]) for c in self.chunks]
+                self.bm25 = BM25Okapi(tokenized_corpus)
+            except Exception as e:
+                try:
+                    st.sidebar.warning(f"⚠️ BM25 인덱스 빌드 실패: {e}")
+                except Exception:
+                    print(f"⚠️ BM25 인덱스 빌드 실패: {e}")
+                self.bm25 = None
+        else:
+            self.bm25 = None
 
     def save_local(self, folder_path, current_hash):
         """인덱싱된 청크와 임베딩 데이터를 로컬 파일로 최적화하여 저장"""
         cache_file = os.path.join(folder_path, ".vector_cache.pkl")
-        data = {
-            "hash": current_hash,
-            "chunks": self.chunks,
-            "embeddings": self.embeddings
-        }
+        
+        # self.file_cache 구조가 없거나 비어있는 경우 새로 초기화하여 저장
+        if not hasattr(self, 'file_cache') or not self.file_cache:
+            self.file_cache = {
+                "version": "2.0",
+                "hash": current_hash,
+                "model_name": "gemini-embedding-2",
+                "files": {}
+            }
+        
+        # 최종 병합된 chunks와 embeddings를 탑레벨에도 캐시하여 고속 로딩 지원
+        self.file_cache["hash"] = current_hash
+        self.file_cache["chunks"] = self.chunks
+        self.file_cache["embeddings"] = self.embeddings
+        
         with open(cache_file, "wb") as f:
-            pickle.dump(data, f)
+            pickle.dump(self.file_cache, f)
 
     def load_local(self, folder_path, current_hash):
         """로컬 파일에서 인덱싱된 데이터를 로드하고 FAISS 인덱스 재빌드"""
@@ -47,20 +105,44 @@ class LocalVectorDB:
         try:
             with open(cache_file, "rb") as f:
                 data = pickle.load(f)
-            if data.get("hash") == current_hash and data.get("chunks"):
+            
+            # v1.0 구버전 캐시 마이그레이션 대응
+            # v1.0 데이터의 경우 "version" 키가 없음
+            is_v2 = data.get("version") == "2.0"
+            
+            # 1. 완벽한 해시 일치 시 즉시 로딩 (변경 없음)
+            if data.get("hash") == current_hash and data.get("chunks") is not None:
                 self.chunks = data["chunks"]
                 self.embeddings = data["embeddings"]
-                # FAISS 인덱스 빌드 실패해도 chunks는 유지 (키워드 검색 폴백으로 동작)
+                if is_v2:
+                    self.file_cache = data
+                else:
+                    # v1.0 캐시를 읽었지만 마침 해시가 정확히 일치한다면, 탑레벨 chunks를 가짜 파일명으로 v2 구조화
+                    self.file_cache = {
+                        "version": "2.0",
+                        "hash": current_hash,
+                        "model_name": "gemini-embedding-2",
+                        "files": {
+                            "migrated_v1_backup.pdf": {
+                                "mtime": 0.0,
+                                "size": 0,
+                                "chunks": data["chunks"],
+                                "embeddings": data["embeddings"]
+                            }
+                        }
+                    }
                 try:
                     self.build_index()
                 except Exception as idx_e:
-                    st.sidebar.warning(f"⚠️ FAISS 인덱스 빌드 실패 (키워드 검색 폴백 활성화): {idx_e}")
+                    st.sidebar.warning(f"⚠️ FAISS 인덱스 빌드 실패: {idx_e}")
                     self.index = None
                 return True
-            elif not data.get("chunks"):
-                st.sidebar.warning("⚠️ 캐시 파일에 청크 데이터가 없습니다. 재빌드가 필요합니다.")
-            else:
-                st.sidebar.warning(f"⚠️ 캐시 해시 불일치 (파일 변경 감지). 재빌드가 필요합니다.")
+                
+            # 2. 해시 불일치 시: v2인 경우, 캐시 데이터 자체는 일단 멤버 필드(self.file_cache)에 살려두고 로딩 프로세스 내부에서 증분 비교를 함
+            if is_v2:
+                self.file_cache = data
+                return False
+                
         except Exception as e:
             st.sidebar.warning(f"캐시 로드 실패: {e}")
         return False
@@ -151,12 +233,28 @@ def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gem
     
     db = LocalVectorDB(category)
     
-    # 1. 기존 캐시 파일 확인 및 로드
+    # 1. 기존 캐시 파일 확인 및 로드 (해시 일치 시 즉시 리턴)
     if db.load_local(cat_path, current_hash):
         return db
             
-    # 2. 캐시가 없거나 파일이 변경된 경우
+    # 2. 캐시가 없거나 파일이 변경된 경우 (해시 불일치)
     if not admin_mode:
+        # 비어있는 인덱스라도 키워드 검색 Fallback을 위해 캐시에 남아있는 chunks/embeddings 정보를 긁어모아 탑레벨에 탑재
+        if hasattr(db, 'file_cache') and "files" in db.file_cache:
+            merged_chunks = []
+            merged_embs = []
+            for f_info in db.file_cache["files"].values():
+                merged_chunks.extend(f_info["chunks"])
+                if len(f_info["embeddings"]) > 0:
+                    merged_embs.append(f_info["embeddings"])
+            db.chunks = merged_chunks
+            if merged_embs:
+                db.embeddings = np.vstack(merged_embs)
+                try:
+                    db.build_index()
+                except Exception:
+                    pass
+        
         logger = logging.getLogger("sen-chatbot")
         logger.warning(f"⚠️ [ADMIN ALERT] '{category}' 카테고리의 벡터 캐시 파일이 없거나 유효하지 않습니다. 분석(인덱싱)이 필요합니다.")
         
@@ -164,18 +262,105 @@ def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gem
         st.sidebar.warning("⚠️ 지침서 분석 캐시가 유효하지 않습니다. 관리자 모드를 활성화하여 분석을 진행하십시오.")
         return db
 
-    # 관리자 모드일 경우에만 새로 분석 시작
+    # 관리자 모드일 경우에만 증분 인덱싱 빌드 시작
     st.sidebar.info("⚙️ [관리자] 새 PDF 문서 의미 분할 및 구글 임베딩 분석을 진행합니다...")
-    chunks = get_pdf_chunks(cat_path)
-    embeddings = create_embeddings(chunks, _client, model_name)
     
-    if embeddings is not None and len(embeddings) > 0:
-        db.chunks = chunks
-        db.embeddings = embeddings
+    # 캐시 v2.0 초기화 또는 획득
+    if not hasattr(db, 'file_cache') or not db.file_cache or db.file_cache.get("version") != "2.0":
+        db.file_cache = {
+            "version": "2.0",
+            "hash": "",
+            "model_name": model_name,
+            "files": {}
+        }
+        
+    # 현재 디렉토리 내 실제 파일 목록
+    files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith(('.pdf', '.md'))])
+    
+    # 2.1. 삭제된 파일 캐시 제외
+    cached_files = list(db.file_cache["files"].keys())
+    for f in cached_files:
+        if f not in files:
+            del db.file_cache["files"][f]
+            st.sidebar.info(f"🗑️ 캐시 제외: {f} (실제 폴더에서 삭제됨)")
+            
+    # 2.2. 신규/수정 파일 분석 및 임베딩 생성
+    from core.parser import RecursiveCharacterTextSplitter, parse_single_pdf, parse_single_md
+    splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=80)
+    
+    any_change = False
+    for filename in files:
+        file_path = os.path.join(cat_path, filename)
+        try:
+            mtime = os.path.getmtime(file_path)
+            size = os.path.getsize(file_path)
+        except Exception as e:
+            st.sidebar.error(f"❌ {filename} 메타데이터 읽기 실패: {e}")
+            continue
+            
+        f_cache = db.file_cache["files"].get(filename)
+        # 변경 여부 확인 (캐시가 없거나, mtime이 다르거나, 크기가 다른 경우)
+        is_changed = (f_cache is None or 
+                      f_cache.get("mtime") != mtime or 
+                      f_cache.get("size") != size)
+                      
+        if is_changed:
+            any_change = True
+            st.sidebar.info(f"🔄 파싱 및 분석 중: {filename}")
+            try:
+                if filename.lower().endswith('.pdf'):
+                    f_chunks = parse_single_pdf(file_path, filename, splitter)
+                elif filename.lower().endswith('.md'):
+                    f_chunks = parse_single_md(file_path, filename, splitter)
+                else:
+                    f_chunks = []
+                    
+                if f_chunks:
+                    f_embeddings = create_embeddings(f_chunks, _client, model_name)
+                else:
+                    f_embeddings = np.array([], dtype=np.float32)
+                    
+                db.file_cache["files"][filename] = {
+                    "mtime": mtime,
+                    "size": size,
+                    "chunks": f_chunks,
+                    "embeddings": f_embeddings
+                }
+            except Exception as e:
+                st.sidebar.error(f"❌ {filename} 분석 실패: {e}")
+                
+    # 2.3. 최종 병합 및 정렬 적용
+    merged_chunks = []
+    merged_embs = []
+    for filename in files:
+        f_info = db.file_cache["files"].get(filename)
+        if f_info and f_info["chunks"]:
+            merged_chunks.extend(f_info["chunks"])
+            if len(f_info["embeddings"]) > 0:
+                merged_embs.append(f_info["embeddings"])
+                
+    if merged_chunks:
+        db.chunks = merged_chunks
+        if merged_embs:
+            db.embeddings = np.vstack(merged_embs)
+        else:
+            db.embeddings = np.array([], dtype=np.float32)
+            
         db.build_index()
         db.save_local(cat_path, current_hash)
-        st.sidebar.success("🎉 분석 결과 로컬 파일로 저장 완료!")
-        
+        st.sidebar.success("🎉 파일 단위 증분 분석 완료 및 캐시 저장!")
+    else:
+        db.chunks = []
+        db.embeddings = None
+        db.index = None
+        # 파일이 없을 시 기존 캐시 파일 완전 삭제
+        cache_file = os.path.join(cat_path, ".vector_cache.pkl")
+        if os.path.exists(cache_file):
+            try:
+                os.remove(cache_file)
+            except Exception:
+                pass
+                
     return db
 
 def get_priority_files(category, manuals_root="manuals"):
@@ -233,33 +418,49 @@ def get_filename_from_metadata(metadata):
     return cleaned
 
 def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemini-embedding-2", manuals_root="manuals"):
-    """질문과 관련 있는 지침 조각을 FAISS로 검색하고 유사도 임계치 필터링, 최신 파일 가중치(Boosting) 부여, 맥락 보강 및 Reranking"""
-    if db is None:
+    """질문과 관련 있는 지침 조각을 FAISS와 로컬 BM25를 결합해 하이브리드로 검색하고 유사도 임계치 필터링, 최신 파일 가중치(Boosting) 부여, 맥락 보강 및 Reranking"""
+    if db is None or not db.chunks:
         return []
     
     chunks = db.chunks
     index = db.index
+    bm25 = db.bm25
 
     # 1. 우선순위 파일 식별
     priority_files = get_priority_files(db.category, manuals_root)
-    search_k = max(50, k * 2)
+    # 하이브리드 대조군 확장을 위해 넉넉한 1차 탐색 범위(100개) 지정
+    search_k = max(100, k * 3)
 
-    if index is None or db.embeddings is None or not len(db.embeddings):
-        # 키워드 기반 검색 백업 (API 미설정 혹은 임베딩 비어있을 때)
-        query_words = query.split()
-        scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
-        top_indices = np.argsort(scores)[-search_k:][::-1]
-        valid_indices = [idx for idx in top_indices if scores[idx] > 0]
-        
-        # 매칭 단어 개수 비율 기반 [0.4, 0.8] 범위 동적 스케일링
-        total_words = len(query_words)
-        if total_words > 0:
-            scores_filtered = [0.4 + (float(scores[idx]) / total_words) * 0.4 for idx in valid_indices]
-        else:
-            scores_filtered = [0.4 for _ in valid_indices]
-    else:
-        # Google API를 이용한 단일 쿼리 고속 임베딩
+    # 2. 로컬 BM25 스코어 계산
+    query_tokens = simple_korean_tokenizer(query)
+    bm25_scores = []
+    max_bm25 = 0.0
+    if bm25 is not None and query_tokens:
         try:
+            bm25_scores = bm25.get_scores(query_tokens)
+            max_bm25 = float(max(bm25_scores)) if len(bm25_scores) > 0 else 0.0
+        except Exception:
+            bm25_scores = []
+
+    # 3. 임베딩(FAISS) 또는 키워드 단독 백업 분기
+    if index is None or db.embeddings is None or not len(db.embeddings):
+        # API 장애 또는 임베딩 미구축 시: 순수 로컬 BM25 점수로 스케일링 처리
+        if len(bm25_scores) > 0 and max_bm25 > 0.0:
+            top_indices = np.argsort(bm25_scores)[-search_k:][::-1]
+            valid_indices = [idx for idx in top_indices if bm25_scores[idx] > 0]
+            scores_filtered = [0.4 + (float(bm25_scores[idx]) / max_bm25) * 0.4 for idx in valid_indices]
+        else:
+            # BM25도 실패 시: 단순 단어 띄어쓰기 빈도 매칭 백업
+            query_words = query.split()
+            simple_scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
+            top_indices = np.argsort(simple_scores)[-search_k:][::-1]
+            valid_indices = [idx for idx in top_indices if simple_scores[idx] > 0]
+            total_words = len(query_words)
+            scores_filtered = [0.4 + (float(simple_scores[idx]) / total_words) * 0.4 if total_words > 0 else 0.4 for idx in valid_indices]
+    else:
+        # 정상 상태: FAISS (시맨틱) + BM25 (어휘) 하이브리드 검색 결합
+        try:
+            # Google API를 이용한 단일 쿼리 고속 임베딩
             query_response = client.models.embed_content(
                 model=model_name,
                 contents=query
@@ -270,31 +471,74 @@ def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemi
             query_norm = np.linalg.norm(query_vec, axis=1, keepdims=True)
             normalized_query = query_vec / (query_norm + 1e-10)
             
-            scores, indices = index.search(normalized_query.astype('float32'), search_k)
+            # FAISS 의미 검색 후보군 탐색
+            faiss_scores, faiss_indices = index.search(normalized_query.astype('float32'), search_k)
+            faiss_scores = faiss_scores[0]
+            faiss_indices = faiss_indices[0]
             
-            scores = scores[0]
-            indices = indices[0]
+            # FAISS 인덱스 맵 구성 (인덱스 -> 코사인 스코어)
+            faiss_map = {}
+            for idx, score in zip(faiss_indices, faiss_scores):
+                if idx != -1:
+                    faiss_map[int(idx)] = float(score)
+                    
+            # BM25 후보군 탐색
+            bm25_indices = []
+            if len(bm25_scores) > 0 and max_bm25 > 0.0:
+                # BM25 상위 점수 인덱스 추출
+                bm25_indices = np.argsort(bm25_scores)[-search_k:][::-1]
+                # 실질 매칭 단어가 있는 인덱스만 필터
+                bm25_indices = [int(idx) for idx in bm25_indices if bm25_scores[idx] > 0]
+                
+            # 후보군 합집합 구성
+            union_indices = list(set(list(faiss_map.keys()) + bm25_indices))
             
+            # 각 후보군 인덱스에 대해 하이브리드 스코어 계산 및 정규화
             valid_indices = []
             scores_filtered = []
-            for idx, score in zip(indices, scores):
-                if idx != -1 and score >= threshold:
-                    valid_indices.append(int(idx))
-                    scores_filtered.append(float(score))
-        except Exception as e:
-            # API 에러 시 키워드 백업 작동
-            st.warning(f"임베딩 검색 에러로 인해 키워드 백업 검색을 구동합니다: {e}")
-            query_words = query.split()
-            scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
-            top_indices = np.argsort(scores)[-search_k:][::-1]
-            valid_indices = [idx for idx in top_indices if scores[idx] > 0]
+            for idx in union_indices:
+                # 1) FAISS 코사인 유사도
+                if idx in faiss_map:
+                    cos_score = faiss_map[idx]
+                else:
+                    # FAISS 상위권에는 없지만 BM25에는 걸린 경우, 직접 코사인 유사도 연산
+                    emb_idx = db.embeddings[idx]
+                    emb_idx_norm = emb_idx / (np.linalg.norm(emb_idx) + 1e-10)
+                    cos_score = float(np.dot(emb_idx_norm, normalized_query[0]))
+                
+                # 2) BM25 스코어
+                if len(bm25_scores) > 0 and max_bm25 > 0.0:
+                    bm25_score = float(bm25_scores[idx]) / max_bm25
+                else:
+                    bm25_score = 0.0
+                
+                # 3) 가중합 결합 (FAISS 0.6 : BM25 0.4)
+                hybrid_score = 0.6 * cos_score + 0.4 * bm25_score
+                
+                # 유사도 임계치 threshold 필터링
+                if hybrid_score >= threshold:
+                    valid_indices.append(idx)
+                    scores_filtered.append(hybrid_score)
             
-            # 매칭 단어 개수 비율 기반 [0.4, 0.8] 범위 동적 스케일링으로 일괄 고정(0.4) 방지 및 정렬 순서 유지
-            total_words = len(query_words)
-            if total_words > 0:
-                scores_filtered = [0.4 + (float(scores[idx]) / total_words) * 0.4 for idx in valid_indices]
+            # 스코어 높은 순으로 정렬
+            if valid_indices:
+                sort_order = np.argsort(scores_filtered)[::-1]
+                valid_indices = [valid_indices[i] for i in sort_order]
+                scores_filtered = [scores_filtered[i] for i in sort_order]
+                
+        except Exception as api_e:
+            st.sidebar.warning(f"⚠️ 하이브리드 검색 오류로 키워드 매칭 폴백: {api_e}")
+            if len(bm25_scores) > 0 and max_bm25 > 0.0:
+                top_indices = np.argsort(bm25_scores)[-search_k:][::-1]
+                valid_indices = [idx for idx in top_indices if bm25_scores[idx] > 0]
+                scores_filtered = [0.4 + (float(bm25_scores[idx]) / max_bm25) * 0.4 for idx in valid_indices]
             else:
-                scores_filtered = [0.4 for _ in valid_indices]
+                query_words = query.split()
+                simple_scores = [sum(1 for word in query_words if word in c["content"]) for c in chunks]
+                top_indices = np.argsort(simple_scores)[-search_k:][::-1]
+                valid_indices = [idx for idx in top_indices if simple_scores[idx] > 0]
+                total_words = len(query_words)
+                scores_filtered = [0.4 + (float(simple_scores[idx]) / total_words) * 0.4 if total_words > 0 else 0.4 for idx in valid_indices]
     
     results = []
     for idx, score in zip(valid_indices, scores_filtered):

@@ -12,7 +12,7 @@
 - **언어 모델**: Google Gemini 2.5 Flash
 - **임베딩 모델**: models/text-embedding-004 (또는 models/embedding-001)
 - **데이터 처리**: PyMuPDF (fitz) - 고성능 PDF 텍스트 추출
-- **검색 알고리즘**: Cosine Similarity (Vector Search)
+- **검색 알고리즘**: FAISS (시맨틱) + BM25 (어휘) 하이브리드 검색 (6:4 가중합)
 - **수치 연산**: NumPy, Scikit-learn
 
 ### 3. 핵심 아키텍처: RAG (Retrieval-Augmented Generation)
@@ -26,10 +26,10 @@
 2. **In-memory Vector Storage**: 세션 기반의 벡터 인덱싱을 통해 별도의 유료 벡터 DB 없이도 빠른 검색 성능 구현.
 3. **Robust Connection Manager**: `@st.cache_resource` 싱글톤 패턴을 적용하여 API 클라이언트 연결 안정성 확보 및 세션 복구 로직 탑재.
 4. **PyMuPDF Engine**: 기존 라이브러리 대비 10배 이상 빠른 PDF 로딩 및 텍스트 파싱.
-5. **Binary Caching**: PDF 다운로드 데이터의 메모리 캐싱으로 UI 반응 속도 극대화.
+5. **Binary Caching**: PDF 다운로드 데이터의 메모리 caching으로 UI 반응 속도 극대화.
 6. **Latest Guideline Score Boosting**: 신구 지침 혼용 시 최신 정보를 우선하기 위한 파일명 키워드/시간 기반 최신 지침 가중치 룰(Score Boosting +0.1) 및 Reranking 로직 탑재.
 7. **Atomic Text-Table Separation & Header Replication**: 표 영역 바운딩 박스를 통해 일반 본문과 표 텍스트 중복을 원천 차단하고, 청크 분할 시 표 헤더를 유기적으로 자동 주입하여 환각을 최소화.
-8. **Context Pollution Prevention & Dynamic Fallback Scaling**: 동일 파일 내 청크만 맥락 보조로 결합하여 파일 간 맥락 꼬임(오염)을 제거하고, API 순절 시 키워드 매칭 스코어를 동적 스케일링하여 최상의 관련성 유지.
+8. **FAISS + BM25 Hybrid Search & Context Isolation**: 시맨틱 벡터 검색(FAISS, 60%)과 로컬 경량 한국어 토크나이저 기반의 키워드 검색(BM25, 40%)을 하이브리드 가중합으로 결합하여 고유 명사 및 법령 조항 매칭의 정확도를 극대화하고, 동일 파일 내 청크만 맥락 보강에 사용해 파일 간 맥락 꼬임(오염) 방지.
 
 ### 5. 운영 지표 (Target Metrics)
 - **동시 접속**: 무료 티어 기준 하루 약 100~500명 이상의 질문 처리 가능 (RAG 최적화 적용 결과).
@@ -37,4 +37,4 @@
 - **정확도**: 참고한 실제 파일명과 페이지 번호를 답변 하단에 100% 명시.
 
 ---
-*Last Updated: 2026-06-09*
+*Last Updated: 2026-06-10*

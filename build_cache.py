@@ -107,41 +107,119 @@ def create_embeddings_cli(chunks, client, model_name="gemini-embedding-2"):
 def build_category_cache(category, manuals_root, client, model_name):
     cat_path = os.path.join(manuals_root, category)
     
-    # PDF 또는 MD 파일이 아예 없는 폴더는 스캔 대상에서 제외 (불필요한 빌드 방지)
-    files = [f for f in os.listdir(cat_path) if f.lower().endswith(('.pdf', '.md'))]
+    # PDF 또는 MD 파일이 아예 없는 폴더는 스캔 대상에서 제외
+    files = sorted([f for f in os.listdir(cat_path) if f.lower().endswith(('.pdf', '.md'))])
     if not files:
         return False
         
     current_hash = get_folder_hash(cat_path, model_name)
     
-    # 1. 기존 캐시 파일 로드 및 해시 일치 여부 확인
     db = LocalVectorDB(category)
+    # 1. 해시가 동일할 시 즉시 완료 처리
     if db.load_local(cat_path, current_hash):
         print(f"   ➔ [{category}] 변경 없음 (캐시가 최신 상태입니다. 건너뜀)")
         return False
         
-    print(f"\n📂 [{category}] 변경 감지! 벡터 DB 빌드를 시작합니다. (경로: {cat_path})")
+    print(f"\n📂 [{category}] 변경 감지! 파일 단위 증분 벡터 DB 빌드를 시작합니다. (경로: {cat_path})")
     print(f"🔑 폴더 해시: {current_hash}")
     
-    # PDF 파싱
-    chunks = get_pdf_chunks_cli(cat_path)
-    if not chunks:
-        print(f"   ⚠️ [{category}] 파싱된 PDF 파일이 없거나 텍스트가 비어 있습니다. 건너뜁니다.")
+    # 캐시 v2.0 초기화 또는 가져오기
+    if not hasattr(db, 'file_cache') or not db.file_cache or db.file_cache.get("version") != "2.0":
+        db.file_cache = {
+            "version": "2.0",
+            "hash": "",
+            "model_name": model_name,
+            "files": {}
+        }
+        
+    # 2.1. 삭제된 파일 캐시 제외
+    cached_files = list(db.file_cache["files"].keys())
+    for f in cached_files:
+        if f not in files:
+            del db.file_cache["files"][f]
+            print(f"   🗑️ 캐시 제외: {f} (실제 폴더에서 삭제됨)")
+            
+    # 2.2. 신규/수정 파일 스캔 및 부분 빌드
+    splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=80)
+    
+    any_change = False
+    for filename in files:
+        file_path = os.path.join(cat_path, filename)
+        try:
+            mtime = os.path.getmtime(file_path)
+            size = os.path.getsize(file_path)
+        except Exception as e:
+            print(f"   ❌ {filename} 메타데이터 읽기 실패: {e}")
+            continue
+            
+        f_cache = db.file_cache["files"].get(filename)
+        is_changed = (f_cache is None or 
+                      f_cache.get("mtime") != mtime or 
+                      f_cache.get("size") != size)
+                      
+        if is_changed:
+            any_change = True
+            print(f"   🔄 파일 분석 중: {filename}")
+            try:
+                if filename.lower().endswith('.pdf'):
+                    f_chunks = parse_single_pdf(file_path, filename, splitter)
+                elif filename.lower().endswith('.md'):
+                    f_chunks = parse_single_md(file_path, filename, splitter)
+                else:
+                    f_chunks = []
+                    
+                if f_chunks:
+                    # CLI 임베딩 생성 호출
+                    f_embeddings = create_embeddings_cli(f_chunks, client, model_name)
+                    if len(f_embeddings) == 0:
+                        print(f"   ❌ {filename} 임베딩 벡터 생성 실패")
+                        sys.exit(1)
+                else:
+                    f_embeddings = np.array([], dtype=np.float32)
+                    
+                db.file_cache["files"][filename] = {
+                    "mtime": mtime,
+                    "size": size,
+                    "chunks": f_chunks,
+                    "embeddings": f_embeddings
+                }
+            except Exception as e:
+                print(f"   ❌ {filename} 분석 실패: {e}")
+                sys.exit(1)
+                
+    # 2.3. 병합 및 최종 인덱스 재정립
+    merged_chunks = []
+    merged_embs = []
+    for filename in files:
+        f_info = db.file_cache["files"].get(filename)
+        if f_info and f_info["chunks"]:
+            merged_chunks.extend(f_info["chunks"])
+            if len(f_info["embeddings"]) > 0:
+                merged_embs.append(f_info["embeddings"])
+                
+    if merged_chunks:
+        db.chunks = merged_chunks
+        if merged_embs:
+            db.embeddings = np.vstack(merged_embs)
+        else:
+            db.embeddings = np.array([], dtype=np.float32)
+            
+        db.build_index()
+        db.save_local(cat_path, current_hash)
+        print(f"   🎉 [{category}] 파일 단위 증분 벡터 DB 빌드 완료! (.vector_cache.pkl)")
+        return True
+    else:
+        db.chunks = []
+        db.embeddings = None
+        db.index = None
+        cache_file = os.path.join(cat_path, ".vector_cache.pkl")
+        if os.path.exists(cache_file):
+            try:
+                os.remove(cache_file)
+            except Exception:
+                pass
+        print(f"   ⚠️ [{category}] 지침서 파일이 없어 캐시가 삭제되었습니다.")
         return False
-        
-    # 임베딩 생성
-    embeddings = create_embeddings_cli(chunks, client, model_name)
-    if embeddings is None or len(embeddings) == 0:
-        print(f"   ❌ [{category}] 임베딩 벡터 생성에 실패했습니다.")
-        sys.exit(1)
-        
-    # 로컬 저장
-    db.chunks = chunks
-    db.embeddings = embeddings
-    db.build_index()
-    db.save_local(cat_path, current_hash)
-    print(f"   🎉 [{category}] 벡터 데이터베이스 빌드 완료! (.vector_cache.pkl)")
-    return True
 
 def main():
     load_dotenv()
