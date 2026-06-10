@@ -235,7 +235,13 @@ def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gem
     
     # 1. 기존 캐시 파일 확인 및 로드 (해시 일치 시 즉시 리턴)
     if db.load_local(cat_path, current_hash):
-        return db
+        # 구버전 캐시(v1.0)이거나 임시 마이그레이션 캐시인 경우, admin_mode가 활성화되어 있을 때만 증분 빌드를 위해 계속 진행함.
+        # 일반 사용자 모드(admin_mode=False)에서는 기존 로드된 데이터를 그대로 즉시 사용하도록 리턴함.
+        if not admin_mode:
+            return db
+        if hasattr(db, 'file_cache') and db.file_cache.get("version") == "2.0":
+            if "migrated_v1_backup.pdf" not in db.file_cache.get("files", {}):
+                return db
             
     # 2. 캐시가 없거나 파일이 변경된 경우 (해시 불일치)
     if not admin_mode:

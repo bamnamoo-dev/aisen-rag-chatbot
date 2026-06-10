@@ -500,7 +500,9 @@ if admin_mode:
             if has_cache and exist_files:
                 current_hash = get_folder_hash(manage_path, LOCAL_MODEL_NAME)
                 if cache_info and cache_info.get("hash") == current_hash:
-                    needs_build = False
+                    # 캐시가 v2.0 포맷이고, 임시 마이그레이션용 파일이 없는 정식 빌드 상태인 경우에만 needs_build = False
+                    if cache_info.get("version") == "2.0" and "migrated_v1_backup.pdf" not in cache_info.get("files", {}):
+                        needs_build = False
             
             if needs_build:
                 st.warning("⚠️ 카테고리 내 파일에 변경 사항이 있거나 아직 빌드되지 않았습니다. 분석 빌드가 필요합니다.")
