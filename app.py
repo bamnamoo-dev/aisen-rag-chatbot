@@ -468,14 +468,14 @@ if admin_mode:
                                     chunk_count = len(f_cache.get("chunks", []))
                                     status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
                                 else:
-                                    status_badge = "🔄 변경 감지 (재분석 필요)"
+                                    status_badge = f"🔄 변경 감지 (재분석 필요) [CH:{cached_hash[:6]} vs FH:{file_hash[:6]}, CS:{f_cache.get('size')} vs FS:{f_size}]"
                             else:
                                 # 이전 캐시 호환성용 (mtime & size)
                                 if f_cache.get("mtime") == f_mtime and f_cache.get("size") == f_size:
                                     chunk_count = len(f_cache.get("chunks", []))
                                     status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
                                 else:
-                                    status_badge = "🔄 변경 감지 (재분석 필요)"
+                                    status_badge = f"🔄 변경 감지 (재분석 필요) [NoCH, CM:{f_cache.get('mtime')} vs FM:{f_mtime}, CS:{f_cache.get('size')} vs FS:{f_size}]"
                                 
                     col_file, col_size, col_time, col_status, col_action = st.columns([4, 2, 3, 3, 2])
                     with col_file:
