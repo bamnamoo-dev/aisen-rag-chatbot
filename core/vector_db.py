@@ -121,9 +121,11 @@ class LocalVectorDB:
                         try:
                             mtime = os.path.getmtime(f_path)
                             size = os.path.getsize(f_path)
+                            f_hash = get_file_hash(f_path)
                         except Exception:
                             mtime = 0.0
                             size = 0
+                            f_hash = ""
                             
                         f_chunks = []
                         f_embs_list = []
@@ -137,6 +139,7 @@ class LocalVectorDB:
                         files_dict[f_name] = {
                             "mtime": mtime,
                             "size": size,
+                            "hash": f_hash,
                             "chunks": f_chunks,
                             "embeddings": np.array(f_embs_list, dtype=np.float32) if f_embs_list else np.array([], dtype=np.float32)
                         }
@@ -163,6 +166,24 @@ class LocalVectorDB:
                 self.chunks = data["chunks"]
                 self.embeddings = data["embeddings"]
                 self.file_cache = data
+                
+                # v2.0 캐시 파일에 'hash' 키가 없는 경우 보완 마이그레이션 수행
+                modified_cache = False
+                if data.get("version") == "2.0" and "files" in data:
+                    for f_name, f_info in data["files"].items():
+                        if "hash" not in f_info:
+                            f_path = os.path.join(folder_path, f_name)
+                            if os.path.exists(f_path):
+                                f_info["hash"] = get_file_hash(f_path)
+                                modified_cache = True
+                                
+                if modified_cache:
+                    try:
+                        with open(cache_file, "wb") as f_out:
+                            pickle.dump(data, f_out)
+                    except Exception:
+                        pass
+                        
                 try:
                     self.build_index()
                 except Exception as idx_e:
@@ -337,10 +358,17 @@ def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gem
             continue
             
         f_cache = db.file_cache["files"].get(filename)
-        # 변경 여부 확인 (캐시가 없거나, mtime이 다르거나, 크기가 다른 경우)
-        is_changed = (f_cache is None or 
-                      f_cache.get("mtime") != mtime or 
-                      f_cache.get("size") != size)
+        file_hash = get_file_hash(file_path)
+        
+        is_changed = True
+        if f_cache is not None:
+            cached_hash = f_cache.get("hash")
+            if cached_hash:
+                is_changed = (f_cache.get("size") != size or cached_hash != file_hash)
+            else:
+                is_changed = (f_cache.get("size") != size or f_cache.get("mtime") != mtime)
+                if not is_changed:
+                    f_cache["hash"] = file_hash
                       
         if is_changed:
             any_change = True
@@ -361,6 +389,7 @@ def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gem
                 db.file_cache["files"][filename] = {
                     "mtime": mtime,
                     "size": size,
+                    "hash": file_hash,
                     "chunks": f_chunks,
                     "embeddings": f_embeddings
                 }
@@ -437,6 +466,19 @@ def get_priority_files(category, manuals_root="manuals"):
         priority_files.add(latest_file)
         
     return priority_files
+
+def get_file_hash(file_path):
+    """파일의 MD5 해시를 계산하여 내용 변경 여부를 정확히 판별"""
+    if not os.path.exists(file_path):
+        return ""
+    hasher = hashlib.md5()
+    try:
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    except Exception:
+        return ""
 
 def get_filename_from_metadata(metadata):
     """청크 메타데이터로부터 순수 파일명을 파싱하여 정규화 및 정밀 매칭을 돕는 헬퍼 함수"""

@@ -24,7 +24,7 @@ importlib.reload(services.llm_service)
 
 # 2. 필요한 함수/상수 임포트
 from app_config import get_system_prompt, get_category_emoji, GLOBAL_CSS, get_legal_system_prompt
-from core.vector_db import build_vector_db, retrieve_top_chunks
+from core.vector_db import build_vector_db, retrieve_top_chunks, get_file_hash
 from services.llm_service import get_genai_client, get_generation_model_name
 
 # 환경변수 로드
@@ -459,11 +459,23 @@ if admin_mode:
                     if cache_info and cache_info.get("version") == "2.0":
                         f_cache = cache_info.get("files", {}).get(f_name)
                         if f_cache:
-                            if f_cache.get("mtime") == f_mtime and f_cache.get("size") == f_size:
-                                chunk_count = len(f_cache.get("chunks", []))
-                                status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
+                            # 1. 파일 내용의 MD5 해시 비교 (Git 체크아웃으로 인한 수정 시각 차이 극복)
+                            file_hash = get_file_hash(f_path)
+                            cached_hash = f_cache.get("hash")
+                            
+                            if cached_hash:
+                                if cached_hash == file_hash and f_cache.get("size") == f_size:
+                                    chunk_count = len(f_cache.get("chunks", []))
+                                    status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
+                                else:
+                                    status_badge = "🔄 변경 감지 (재분석 필요)"
                             else:
-                                status_badge = "🔄 변경 감지 (재분석 필요)"
+                                # 이전 캐시 호환성용 (mtime & size)
+                                if f_cache.get("mtime") == f_mtime and f_cache.get("size") == f_size:
+                                    chunk_count = len(f_cache.get("chunks", []))
+                                    status_badge = f"✅ 분석 완료 (청크 {chunk_count}개)"
+                                else:
+                                    status_badge = "🔄 변경 감지 (재분석 필요)"
                                 
                     col_file, col_size, col_time, col_status, col_action = st.columns([4, 2, 3, 3, 2])
                     with col_file:

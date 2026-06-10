@@ -20,7 +20,7 @@ sys.modules['streamlit'] = MagicMock()
 
 # Now we can safely import our classes and functions
 from core.parser import RecursiveCharacterTextSplitter, table_to_markdown, parse_single_pdf, parse_single_md
-from core.vector_db import LocalVectorDB, get_folder_hash
+from core.vector_db import LocalVectorDB, get_folder_hash, get_file_hash
 import fitz
 
 def get_pdf_chunks_cli(folder_path):
@@ -153,9 +153,17 @@ def build_category_cache(category, manuals_root, client, model_name):
             continue
             
         f_cache = db.file_cache["files"].get(filename)
-        is_changed = (f_cache is None or 
-                      f_cache.get("mtime") != mtime or 
-                      f_cache.get("size") != size)
+        file_hash = get_file_hash(file_path)
+        
+        is_changed = True
+        if f_cache is not None:
+            cached_hash = f_cache.get("hash")
+            if cached_hash:
+                is_changed = (f_cache.get("size") != size or cached_hash != file_hash)
+            else:
+                is_changed = (f_cache.get("size") != size or f_cache.get("mtime") != mtime)
+                if not is_changed:
+                    f_cache["hash"] = file_hash
                       
         if is_changed:
             any_change = True
@@ -180,6 +188,7 @@ def build_category_cache(category, manuals_root, client, model_name):
                 db.file_cache["files"][filename] = {
                     "mtime": mtime,
                     "size": size,
+                    "hash": file_hash,
                     "chunks": f_chunks,
                     "embeddings": f_embeddings
                 }
