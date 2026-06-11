@@ -87,7 +87,7 @@ if "messages" not in st.session_state:
 if "legal_messages" not in st.session_state:
     st.session_state.legal_messages = []
 if "selected_category" not in st.session_state:
-    st.session_state.selected_category = None
+    st.session_state.selected_category = "⭐ 자동 분류"
 if "rebuild_trigger" not in st.session_state:
     st.session_state.rebuild_trigger = 0.0 
 if "show_manual" not in st.session_state:
@@ -122,7 +122,7 @@ with tab_col1:
     btn_type = "primary" if is_guidelines else "secondary"
     if st.button("📋 지침/매뉴얼", key="tab_guidelines", use_container_width=True, type=btn_type):
         st.session_state.current_tab = "지침서"
-        st.session_state.selected_category = None
+        st.session_state.selected_category = "⭐ 자동 분류"
         st.session_state.show_manual = False
         st.rerun()
 with tab_col2:
@@ -187,8 +187,28 @@ if st.session_state.current_tab == "지침서":
     categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
     categories = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
     
+    # ⭐ 자동 분류 버튼을 상단에 별도로 배치
+    is_auto = st.session_state.selected_category == "⭐ 자동 분류" or st.session_state.selected_category is None
+    btn_type_auto = "primary" if is_auto else "secondary"
+    if st.sidebar.button("⭐ 자동 분류 (전체 질문)", key="btn_auto_routing", use_container_width=True, type=btn_type_auto):
+        st.session_state.selected_category = "⭐ 자동 분류"
+        st.session_state.messages = []
+        if "chat" in st.session_state: del st.session_state.chat
+        st.session_state.show_manual = False
+        st.sidebar.rerun() if hasattr(st.sidebar, 'rerun') else st.rerun()
+        
+    st.sidebar.markdown("<div style='margin-top: 6px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
     # 사이드바 - 카테고리 버튼 생성 (2열 격자 배치)
     active_cat_to_show_files = None
+    if st.session_state.selected_category != "⭐ 자동 분류":
+        active_cat_to_show_files = st.session_state.selected_category
+    else:
+        chat_history = st.session_state.messages if st.session_state.current_tab == "지침서" else st.session_state.legal_messages
+        for msg in reversed(chat_history or []):
+            if msg.get("role") == "assistant" and msg.get("routed_category"):
+                active_cat_to_show_files = msg["routed_category"]
+                break
     for i in range(0, len(categories), 2):
         cols = st.sidebar.columns(2)
         
@@ -631,44 +651,53 @@ def render_qa_content():
         st.stop()
 
     if selected_category:
-        cat_path = os.path.join(manuals_root, selected_category)
-        current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
-        with st.spinner(f"AI가 '{selected_category}' 지침 도서관을 구축 중입니다..."):
-            db = build_vector_db(
-                category=selected_category, 
-                manuals_root=manuals_root, 
-                admin_mode=admin_mode, 
-                _client=client, 
-                model_name=LOCAL_MODEL_NAME,
-                rebuild_trigger=st.session_state.rebuild_trigger,
-                folder_hash=current_folder_hash
-            )
-        
-        db_stats = db
-        
-        if not db_stats.chunks:
-            st.markdown(f"""
-                <div style="padding: 100px 0; text-align: center;">
-                    <div style="font-size: 4rem; margin-bottom: 20px;">⏳</div>
-                    <h3 style="color: #0f172a; font-weight: 800;">지침서 데이터 준비 중</h3>
-                    <p style="color: #64748b; font-size: 1.1rem;">'{selected_category}' 분야의 지침서 분석 캐시가 존재하지 않습니다.</p>
-                    <p style="color: #94a3b8; font-size: 0.95rem;">관리자 모드를 활성화하여 최초 1회 문서 분석(인덱싱)을 완료해야 대화 기능이 활성화됩니다.</p>
-                </div>
-            """, unsafe_allow_html=True)
-            st.stop()
+        db = None
+        if selected_category != "⭐ 자동 분류":
+            cat_path = os.path.join(manuals_root, selected_category)
+            current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
+            with st.spinner(f"AI가 '{selected_category}' 지침 도서관을 구축 중입니다..."):
+                db = build_vector_db(
+                    category=selected_category, 
+                    manuals_root=manuals_root, 
+                    admin_mode=admin_mode, 
+                    _client=client, 
+                    model_name=LOCAL_MODEL_NAME,
+                    rebuild_trigger=st.session_state.rebuild_trigger,
+                    folder_hash=current_folder_hash
+                )
             
-        sidebar_stats_container.success(f"✅ {len(db_stats.chunks)}개 문단 분석 완료")
+            if not db.chunks:
+                st.markdown(f"""
+                    <div style="padding: 100px 0; text-align: center;">
+                        <div style="font-size: 4rem; margin-bottom: 20px;">⏳</div>
+                        <h3 style="color: #0f172a; font-weight: 800;">지침서 데이터 준비 중</h3>
+                        <p style="color: #64748b; font-size: 1.1rem;">'{selected_category}' 분야의 지침서 분석 캐시가 존재하지 않습니다.</p>
+                        <p style="color: #94a3b8; font-size: 0.95rem;">관리자 모드를 활성화하여 최초 1회 문서 분석(인덱싱)을 완료해야 대화 기능이 활성화됩니다.</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                st.stop()
+                
+            sidebar_stats_container.success(f"✅ {len(db.chunks)}개 문단 분석 완료")
+        else:
+            sidebar_stats_container.info("ℹ️ 질문 입력 시 분야가 자동 판별되어 지침서가 로드됩니다.")
+            
         selected_model_name = get_generation_model_name(client)
         sidebar_stats_container.info(f"🚀 AI 엔진: **{selected_model_name.split('/')[-1] if selected_model_name else '자동'}**")
         sidebar_stats_container.divider()
 
         # 헤더 렌더링 분기
         if st.session_state.current_tab == "지침서":
+            header_name = selected_category
+            if selected_category == "⭐ 자동 분류":
+                header_name = "⭐ 행정 지침 자동 분류 Q&A"
+                header_desc = "질문을 입력하시면 AI가 알맞은 분야의 교육청 지침서를 자동으로 탐색하여 최적의 답변을 드립니다."
+            else:
+                header_desc = "행정지원과의 공식 지침서 분석 및 실시간 답변을 제공합니다."
             st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%); color: white; padding: 24px 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(30, 96, 255, 0.08); margin-bottom: 30px; position: relative; overflow: hidden; text-align: left;">
                     <span style="display: inline-block; background: rgba(255, 255, 255, 0.15); padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; text-transform: uppercase;">LIVE RAG ENGINE SYSTEM</span>
-                    <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px 0; color: white;">{selected_category}</h1>
-                    <p style="font-size: 0.9rem; opacity: 0.9; margin: 0; font-weight: 400;">행정지원과의 공식 지침서 분석 및 실시간 답변을 제공합니다.</p>
+                    <h1 style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px 0; color: white;">{header_name}</h1>
+                    <p style="font-size: 0.9rem; opacity: 0.9; margin: 0; font-weight: 400;">{header_desc}</p>
                 </div>
             """, unsafe_allow_html=True)
         else:
@@ -688,6 +717,14 @@ def render_qa_content():
         for idx, message in enumerate(chat_history):
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
+                
+                # 자동 분류 결과 안내 메시지 표시
+                if message["role"] == "assistant" and message.get("routed_category"):
+                    st.markdown(f"""
+                        <div style="background-color: #eff6ff; border-left: 4px solid #1e60ff; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: #1e40af; margin-top: 6px; margin-bottom: 8px; display: inline-block;">
+                            📍 자동 분류 결과: <strong>{message['routed_category']}</strong> 분야 지침서 검색
+                        </div>
+                    """, unsafe_allow_html=True)
                 
                 # 참조 지침서/법령 팝오버 렌더링
                 if message["role"] == "assistant" and message.get("unique_chunks"):
@@ -712,6 +749,7 @@ def render_qa_content():
                 
                 # 피드백 수집기 연동
                 if message["role"] == "assistant":
+                    msg_cat = message.get("routed_category") or selected_category
                     if message.get("feedback"):
                         val = message["feedback"]
                         icon = "👍" if val == "like" else "👎"
@@ -719,7 +757,7 @@ def render_qa_content():
                     elif idx == len(chat_history) - 1:
                         # 펜딩 상태가 아니면 Thumbs 위젯 표시
                         if not (st.session_state.get("pending_dislike") and st.session_state.pending_dislike["idx"] == idx):
-                            feedback_key = f"feedback_{selected_category}_{idx}"
+                            feedback_key = f"feedback_{msg_cat}_{idx}"
                             fb_val = st.feedback("thumbs", key=feedback_key)
                             if fb_val is not None:
                                 fb_type = "like" if fb_val == 1 else "dislike"
@@ -727,7 +765,7 @@ def render_qa_content():
                                     from core.feedback import FeedbackManager
                                     ref_files = message.get("referenced_files", [])
                                     FeedbackManager.save_feedback(
-                                        category=selected_category,
+                                        category=msg_cat,
                                         question=chat_history[idx-1]["content"] if idx > 0 else "이전 질문 없음",
                                         answer=message["content"],
                                         feedback_type="like",
@@ -739,7 +777,7 @@ def render_qa_content():
                                 else:
                                     st.session_state.pending_dislike = {
                                         "idx": idx,
-                                        "category": selected_category,
+                                        "category": msg_cat,
                                         "question": chat_history[idx-1]["content"] if idx > 0 else "이전 질문 없음",
                                         "answer": message["content"],
                                         "ref_files": message.get("referenced_files", [])
@@ -785,7 +823,10 @@ def render_qa_content():
             del st.session_state.pending_prompt
         else:
             if st.session_state.current_tab == "지침서":
-                input_placeholder = f"{selected_category} 업무에 대해 질문해 주세요."
+                if selected_category == "⭐ 자동 분류":
+                    input_placeholder = "궁금하신 행정 업무에 대해 자유롭게 질문해 주세요. (자동 분류)"
+                else:
+                    input_placeholder = f"{selected_category} 업무에 대해 질문해 주세요."
             else:
                 law_example = "지방공무원법상 직위해제" if selected_category == "상위법령" else "공무원 복무 조례상 특별휴가"
                 input_placeholder = f"궁금하신 {selected_category}에 대해 질문해 주세요. (예: {law_example})"
@@ -805,7 +846,34 @@ def render_qa_content():
             with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
                 st.write("🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중..." if st.session_state.current_tab == "지침서" else "🛰️ 1. 로컬 법령 벡터 DB에서 관련 조항 탐색 중...")
                 time.sleep(0.3)
-                relevant_chunks = retrieve_top_chunks(prompt, db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+                
+                # Determine actual category and database dynamically if in Auto Routing mode
+                actual_category = selected_category
+                active_db = db
+                routed_category_name = None
+                
+                if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
+                    from core.vector_db import route_query_by_keywords
+                    categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
+                    categories_list = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
+                    
+                    routed_category_name = route_query_by_keywords(prompt, categories_list)
+                    actual_category = routed_category_name
+                    
+                    # On-the-fly loading of DB for routed category
+                    cat_path = os.path.join(manuals_root, actual_category)
+                    current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
+                    active_db = build_vector_db(
+                        category=actual_category, 
+                        manuals_root=manuals_root, 
+                        admin_mode=admin_mode, 
+                        _client=client, 
+                        model_name=LOCAL_MODEL_NAME,
+                        rebuild_trigger=st.session_state.rebuild_trigger,
+                        folder_hash=current_folder_hash
+                    )
+                
+                relevant_chunks = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
                 
                 st.write(f"📊 2. 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개)")
                 time.sleep(0.2)
@@ -832,9 +900,9 @@ def render_qa_content():
                 context_text = "(검색 결과가 존재하지 않습니다. 질문과 일치하거나 유사도가 0.4 이상인 공식 지침서 내용이 전혀 발견되지 않았습니다.)"
 
             if st.session_state.current_tab == "지침서":
-                system_prompt = get_system_prompt(selected_category, context_text)
+                system_prompt = get_system_prompt(actual_category, context_text)
             else:
-                system_prompt = get_legal_system_prompt(selected_category, context_text)
+                system_prompt = get_legal_system_prompt(actual_category, context_text)
 
             with st.chat_message("assistant"):
                 message_placeholder = st.empty()
@@ -921,7 +989,8 @@ def render_qa_content():
                             "fetched_law": fetched_law,
                             "referenced_files": [c['metadata'] for c in unique_chunks] if unique_chunks else [],
                             "unique_chunks": unique_chunks,
-                            "recommendations": recommendations
+                            "recommendations": recommendations,
+                            "routed_category": routed_category_name
                         })
                     else:
                         st.session_state.legal_messages.append({

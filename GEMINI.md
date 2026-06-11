@@ -30,6 +30,7 @@
 6. **Latest Guideline Score Boosting**: 신구 지침 혼용 시 최신 정보를 우선하기 위한 파일명 키워드/시간 기반 최신 지침 가중치 룰(Score Boosting +0.1) 및 Reranking 로직 탑재.
 7. **Atomic Text-Table Separation & Header Replication**: 표 영역 바운딩 박스를 통해 일반 본문과 표 텍스트 중복을 원천 차단하고, 청크 분할 시 표 헤더를 유기적으로 자동 주입하여 환각을 최소화.
 8. **FAISS + BM25 Hybrid Search & Context Isolation**: 시맨틱 벡터 검색(FAISS, 60%)과 로컬 경량 한국어 토크나이저 기반의 키워드 검색(BM25, 40%)을 하이브리드 가중합으로 결합하여 고유 명사 및 법령 조항 매칭의 정확도를 극대화하고, 동일 파일 내 청크만 맥락 보강에 사용해 파일 간 맥락 꼬임(오염) 방지.
+9. **Streamlit Memory Optimization & Cache Invalidation**: 지침서 변경 시 캐시 갱신을 보장하는 폴더 해시 기반 자동 캐시 무효화 및 메모리 누수 방지를 위한 LRU 캐시 엔트리 제한(max_entries=3) 적용.
 
 ### 5. 운영 지표 (Target Metrics)
 - **동시 접속**: 무료 티어 기준 하루 약 100~500명 이상의 질문 처리 가능 (RAG 최적화 적용 결과).
@@ -38,3 +39,4 @@
 
 ---
 *Last Updated: 2026-06-11*
+
