@@ -213,6 +213,32 @@ GLOBAL_CSS = """
         box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
 
+    /* ⭐ 자동 분류 버튼 오렌지색 전용 스타일 */
+    .auto-routing-btn-container button[kind="primary"] {
+        background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #ea580c !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 14px rgba(234, 88, 12, 0.25) !important;
+    }
+    .auto-routing-btn-container button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+        border-color: #f97316 !important;
+        box-shadow: 0 6px 20px rgba(234, 88, 12, 0.35) !important;
+    }
+    .auto-routing-btn-container button[kind="secondary"] {
+        background-color: #ffffff !important;
+        color: #ea580c !important;
+        border: 1px solid #ffedd5 !important;
+        box-shadow: 0 1px 2px rgba(234, 88, 12, 0.02) !important;
+    }
+    .auto-routing-btn-container button[kind="secondary"]:hover {
+        border-color: #ff925c !important;
+        color: #ff5200 !important;
+        background-color: #fff7ed !important;
+        box-shadow: 0 4px 12px rgba(255, 82, 0, 0.08) !important;
+    }
+
     /* 지침서 다운로드 박스 프리미엄 스타일 */
     .file-container {
         background-color: #f0fdf4 !important;

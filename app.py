@@ -190,12 +190,14 @@ if st.session_state.current_tab == "지침서":
     # ⭐ 자동 분류 버튼을 상단에 별도로 배치
     is_auto = st.session_state.selected_category == "⭐ 자동 분류" or st.session_state.selected_category is None
     btn_type_auto = "primary" if is_auto else "secondary"
+    st.sidebar.markdown('<div class="auto-routing-btn-container">', unsafe_allow_html=True)
     if st.sidebar.button("⭐ 자동 분류 (전체 질문)", key="btn_auto_routing", use_container_width=True, type=btn_type_auto):
         st.session_state.selected_category = "⭐ 자동 분류"
         st.session_state.messages = []
         if "chat" in st.session_state: del st.session_state.chat
         st.session_state.show_manual = False
         st.rerun()
+    st.sidebar.markdown('</div>', unsafe_allow_html=True)
         
     st.sidebar.markdown("<div style='margin-top: 6px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -721,7 +723,7 @@ def render_qa_content():
                 # 자동 분류 결과 안내 메시지 표시
                 if message["role"] == "assistant" and message.get("routed_category"):
                     st.markdown(f"""
-                        <div style="background-color: #eff6ff; border-left: 4px solid #1e60ff; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: #1e40af; margin-top: 6px; margin-bottom: 8px; display: inline-block;">
+                        <div style="background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: #c2410c; margin-top: 6px; margin-bottom: 8px; display: inline-block;">
                             📍 자동 분류 결과: <strong>{message['routed_category']}</strong> 분야 지침서 검색
                         </div>
                     """, unsafe_allow_html=True)
