@@ -856,22 +856,28 @@ def render_qa_content():
                     from core.vector_db import route_query_by_keywords
                     categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
                     categories_list = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
-                    
-                    # 1순위 및 2순위 후보 리스트 획득 (예: ['예산', '지출'])
-                    candidates = route_query_by_keywords(prompt, categories_list, return_candidates=True)
+                    best_cat = route_query_by_keywords(prompt, categories_list, return_candidates=False)
                 else:
-                    candidates = [selected_category]
+                    best_cat = selected_category
                 
-                for idx, cat in enumerate(candidates):
+                # 지출, 세입, 계약 질문은 예산 폴더와 교차 검색 및 병합
+                search_categories = [best_cat]
+                if best_cat in ["지출", "세입", "계약"] and best_cat != "예산":
+                    categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
+                    if "예산" in categories_raw:
+                        search_categories.append("예산")
+                
+                searched_cats = []
+                
+                # 1단계: 지정된 카테고리들에서 검색 및 병합
+                for cat in search_categories:
                     actual_category = cat
-                    
-                    if len(candidates) > 1:
-                        st.write(f"🛰️ {idx+1}. 로컬 벡터 DB [{actual_category}] 분야 탐색 중...")
+                    if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서" and len(search_categories) > 1:
+                        st.write(f"🛰️ 로컬 벡터 DB [{actual_category}] 분야 탐색 중...")
                     else:
                         st.write(f"🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중..." if st.session_state.current_tab == "지침서" else "🛰️ 1. 로컬 법령 벡터 DB에서 관련 조항 탐색 중...")
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                     
-                    # On-the-fly loading of DB for the candidate category
                     cat_path = os.path.join(manuals_root, actual_category)
                     current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
                     active_db = build_vector_db(
@@ -884,22 +890,52 @@ def render_qa_content():
                         folder_hash=current_folder_hash
                     )
                     
-                    # Retrieve top chunks
-                    relevant_chunks = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
-                    
-                    if len(relevant_chunks) > 0:
-                        if len(candidates) > 1:
-                            st.write(f"📊 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개) - [{actual_category}] 폴더 채택")
-                        else:
-                            st.write(f"📊 2. 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개)")
-                        break
-                    else:
-                        if len(candidates) > 1 and idx < len(candidates) - 1:
-                            st.write(f"⚠️ [{actual_category}] 폴더에서 매칭되는 답변을 찾지 못해, 다음 후보인 [{candidates[idx+1]}] 폴더를 교차 탐색합니다...")
-                            time.sleep(0.5)
+                    chunks_for_cat = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+                    if len(chunks_for_cat) > 0:
+                        relevant_chunks.extend(chunks_for_cat)
+                        if actual_category not in searched_cats:
+                            searched_cats.append(actual_category)
                 
+                # 2단계: 만약 1차 분류 폴더들에서 아무 매칭 청크도 안 나온 경우, 전체 폴더에 대해 순차 Fallback 검색 수행
+                if len(relevant_chunks) == 0 and selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
+                    st.write("⚠️ 1차 분류 폴더에서 관련 답변을 찾지 못해, 다른 폴더들을 교차 탐색합니다...")
+                    time.sleep(0.3)
+                    
+                    categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
+                    categories_list = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
+                    fallback_candidates = [cat for cat in categories_list if cat not in search_categories]
+                    
+                    for cat in fallback_candidates:
+                        actual_category = cat
+                        cat_path = os.path.join(manuals_root, actual_category)
+                        current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
+                        active_db = build_vector_db(
+                            category=actual_category, 
+                            manuals_root=manuals_root, 
+                            admin_mode=admin_mode, 
+                            _client=client, 
+                            model_name=LOCAL_MODEL_NAME,
+                            rebuild_trigger=st.session_state.rebuild_trigger,
+                            folder_hash=current_folder_hash
+                        )
+                        chunks_for_cat = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+                        if len(chunks_for_cat) > 0:
+                            relevant_chunks.extend(chunks_for_cat)
+                            searched_cats.append(actual_category)
+                            best_cat = actual_category  # UI 및 다운로드 연동용 카테고리 업데이트
+                            break
+                
+                # 3단계: 검색 결과 점수 기준 재정렬 및 UI 메시지 출력
+                if len(relevant_chunks) > 0:
+                    relevant_chunks = sorted(relevant_chunks, key=lambda x: x["score"], reverse=True)
+                    if len(searched_cats) > 1:
+                        st.write(f"📊 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개) - {searched_cats} 폴더 채택 및 교차 병합 완료")
+                    else:
+                        st.write(f"📊 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개) - [{best_cat}] 폴더 채택")
+                
+                actual_category = best_cat
                 if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
-                    routed_category_name = actual_category
+                    routed_category_name = best_cat
                 
                 time.sleep(0.2)
                 st.write("🤖 3. AI-SENSE 스마트 엔진이 답변을 작성하고 있습니다...")
