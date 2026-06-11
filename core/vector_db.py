@@ -713,15 +713,16 @@ def retrieve_top_chunks(query, db, client, k=15, threshold=0.4, model_name="gemi
     results = sorted(results, key=lambda x: x["score"], reverse=True)
     return results[:k]
 
-def route_query_by_keywords(query, categories):
+def route_query_by_keywords(query, categories, return_candidates=False):
     """사용자 질문을 분석하여 가장 연관성 높은 지침 카테고리 폴더명을 100% 로컬로 자동 분류합니다.
     
     Args:
         query: 사용자 질문 문자열
         categories: 분류 대상 카테고리 리스트 (예: ['공무원', '계약', '지출', ...])
+        return_candidates: True인 경우 우회/동기화 우선순위가 반영된 후보군 리스트 반환
         
     Returns:
-        최다 매칭 점수를 얻은 카테고리명
+        최다 매칭 점수를 얻은 카테고리명 (또는 후보군 리스트)
     """
     if not query:
         return categories[0] if categories else None
@@ -816,8 +817,15 @@ def route_query_by_keywords(query, categories):
             best_cat = categories[0] if categories else None
             
     # 7.5 돈/세입/세출/지출 관련 질문은 가장 포괄적이고 기본적인 지침이 수록된 '예산' 폴더(예산편성 기본지침 등)를 우선 조회하도록 라우팅 통합
+    original_best = best_cat
     if best_cat in ["지출", "세입"]:
         if "예산" in categories:
             best_cat = "예산"
+            
+    if return_candidates:
+        candidates = [best_cat]
+        if original_best != best_cat and original_best not in candidates:
+            candidates.append(original_best)
+        return candidates
         
     return best_cat

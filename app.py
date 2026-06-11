@@ -846,23 +846,32 @@ def render_qa_content():
                 st.markdown(prompt)
 
             with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
-                st.write("🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중..." if st.session_state.current_tab == "지침서" else "🛰️ 1. 로컬 법령 벡터 DB에서 관련 조항 탐색 중...")
-                time.sleep(0.3)
-                
                 # Determine actual category and database dynamically if in Auto Routing mode
                 actual_category = selected_category
                 active_db = db
                 routed_category_name = None
+                relevant_chunks = []
                 
                 if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
                     from core.vector_db import route_query_by_keywords
                     categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
                     categories_list = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
                     
-                    routed_category_name = route_query_by_keywords(prompt, categories_list)
-                    actual_category = routed_category_name
+                    # 1순위 및 2순위 후보 리스트 획득 (예: ['예산', '지출'])
+                    candidates = route_query_by_keywords(prompt, categories_list, return_candidates=True)
+                else:
+                    candidates = [selected_category]
+                
+                for idx, cat in enumerate(candidates):
+                    actual_category = cat
                     
-                    # On-the-fly loading of DB for routed category
+                    if len(candidates) > 1:
+                        st.write(f"🛰️ {idx+1}. 로컬 벡터 DB [{actual_category}] 분야 탐색 중...")
+                    else:
+                        st.write(f"🛰️ 1. 로컬 벡터 DB에서 관련 지침서 탐색 중..." if st.session_state.current_tab == "지침서" else "🛰️ 1. 로컬 법령 벡터 DB에서 관련 조항 탐색 중...")
+                    time.sleep(0.2)
+                    
+                    # On-the-fly loading of DB for the candidate category
                     cat_path = os.path.join(manuals_root, actual_category)
                     current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
                     active_db = build_vector_db(
@@ -874,12 +883,25 @@ def render_qa_content():
                         rebuild_trigger=st.session_state.rebuild_trigger,
                         folder_hash=current_folder_hash
                     )
+                    
+                    # Retrieve top chunks
+                    relevant_chunks = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+                    
+                    if len(relevant_chunks) > 0:
+                        if len(candidates) > 1:
+                            st.write(f"📊 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개) - [{actual_category}] 폴더 채택")
+                        else:
+                            st.write(f"📊 2. 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개)")
+                        break
+                    else:
+                        if len(candidates) > 1 and idx < len(candidates) - 1:
+                            st.write(f"⚠️ [{actual_category}] 폴더에서 매칭되는 답변을 찾지 못해, 다음 후보인 [{candidates[idx+1]}] 폴더를 교차 탐색합니다...")
+                            time.sleep(0.5)
                 
-                relevant_chunks = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+                if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
+                    routed_category_name = actual_category
                 
-                st.write(f"📊 2. 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개)")
                 time.sleep(0.2)
-                
                 st.write("🤖 3. AI-SENSE 스마트 엔진이 답변을 작성하고 있습니다...")
                 status.update(label="🤖 AI가 답변을 작성하고 있습니다...", state="running")
 
