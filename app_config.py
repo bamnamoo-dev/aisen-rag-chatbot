@@ -406,7 +406,19 @@ GLOBAL_CSS = """
             Element.prototype.scrollIntoView = function(options) {
                 const scrollPos = window.innerHeight + window.scrollY;
                 const threshold = document.documentElement.scrollHeight - 150;
-                if (scrollPos < threshold) {
+                const userManuallyScrolledUp = scrollPos < threshold;
+                
+                let questionReachedTop = false;
+                const messages = document.querySelectorAll('[data-testid=stChatMessage]');
+                if (messages.length >= 2) {
+                    const userMsg = messages[messages.length - 2];
+                    const rect = userMsg.getBoundingClientRect();
+                    if (rect.top <= 20) {
+                        questionReachedTop = true;
+                    }
+                }
+                
+                if (userManuallyScrolledUp || questionReachedTop) {
                     return;
                 }
                 originalScrollIntoView.apply(this, arguments);
@@ -419,7 +431,19 @@ GLOBAL_CSS = """
                 }
                 const scrollPos = window.innerHeight + window.scrollY;
                 const threshold = document.documentElement.scrollHeight - 150;
-                if (scrollPos < threshold && targetY > window.scrollY) {
+                const userManuallyScrolledUp = scrollPos < threshold;
+                
+                let questionReachedTop = false;
+                const messages = document.querySelectorAll('[data-testid=stChatMessage]');
+                if (messages.length >= 2) {
+                    const userMsg = messages[messages.length - 2];
+                    const rect = userMsg.getBoundingClientRect();
+                    if (rect.top <= 20) {
+                        questionReachedTop = true;
+                    }
+                }
+                
+                if ((userManuallyScrolledUp || questionReachedTop) && targetY > window.scrollY) {
                     return;
                 }
                 originalScrollTo.apply(this, arguments);
