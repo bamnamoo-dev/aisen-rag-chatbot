@@ -26,7 +26,7 @@
 2. **In-memory Vector Storage**: 세션 기반의 벡터 인덱싱을 통해 별도의 유료 벡터 DB 없이도 빠른 검색 성능 구현.
 3. **Robust Connection Manager**: `@st.cache_resource` 싱글톤 패턴을 적용하여 API 클라이언트 연결 안정성 확보 및 세션 복구 로직 탑재.
 4. **PyMuPDF Engine**: 기존 라이브러리 대비 10배 이상 빠른 PDF 로딩 및 텍스트 파싱.
-5. **Binary Caching**: PDF 다운로드 데이터의 메모리 caching으로 UI 반응 속도 극대화.
+5. **Binary Caching**: PDF 다운로드 데이터의 메모리 caching으로 UI 반응 속도 극대화 및 벡터 DB 캐시(.vector_cache.pkl)의 이중 데이터 중복 제거와 Gzip 압축 적용으로 전체 캐시 용량 214MB 초경량화(GitHub 50MB 경고 완벽 해결).
 6. **Latest Guideline Score Boosting**: 신구 지침 혼용 시 최신 정보를 우선하기 위한 파일명 키워드/시간 기반 최신 지침 가중치 룰(Score Boosting +0.1) 및 Reranking 로직 탑재.
 7. **Atomic Text-Table Separation & Header Replication**: 표 영역 바운딩 박스를 통해 일반 본문과 표 텍스트 중복을 원천 차단하고, 청크 분할 시 표 헤더를 유기적으로 자동 주입하여 환각을 최소화.
 8. **FAISS + BM25 Hybrid Search & Context Isolation**: 시맨틱 벡터 검색(FAISS, 60%)과 로컬 경량 한국어 토크나이저 기반의 키워드 검색(BM25, 40%)을 하이브리드 가중합으로 결합하여 고유 명사 및 법령 조항 매칭의 정확도를 극대화하고, 동일 파일 내 청크만 맥락 보강에 사용해 파일 간 맥락 꼬임(오염) 방지.
@@ -37,4 +37,4 @@
 - **정확도**: 참고한 실제 파일명과 페이지 번호를 답변 하단에 100% 명시.
 
 ---
-*Last Updated: 2026-06-10*
+*Last Updated: 2026-06-11*
