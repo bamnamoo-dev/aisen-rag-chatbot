@@ -867,10 +867,23 @@ def render_qa_content():
                 else:
                     best_cat = selected_category
                 
-                # 지출, 세입, 계약 질문은 예산 폴더와 교차 검색 및 병합
+                # 돈관련 및 계약관련 교차 검색 및 탐색 순서 강제화
                 search_categories = [best_cat]
-                if best_cat in ["지출", "세입", "계약"] and best_cat != "예산":
-                    categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
+                categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
+                
+                if best_cat in ["지출", "세입", "예산"]:
+                    # 돈 관련 질문: '예산' 폴더를 제일 처음으로 검색하도록 설정
+                    if best_cat == "예산":
+                        # 예산 폴더 검색 + 다른 지출/세입 폴더 교차 검색 추가
+                        for c in ["지출", "세입"]:
+                            if c in categories_raw and c not in search_categories:
+                                search_categories.append(c)
+                    else:
+                        # 지출/세입 폴더 검색 시 '예산' 폴더를 최우선으로 하여 ['예산', best_cat] 순으로 설정
+                        search_categories = ["예산", best_cat]
+                elif best_cat == "계약":
+                    # 계약 관련 질문: '계약' 폴더를 최우선으로 하고, 예산 폴더도 교차 검색 추가
+                    search_categories = ["계약"]
                     if "예산" in categories_raw:
                         search_categories.append("예산")
                 
@@ -934,9 +947,37 @@ def render_qa_content():
                             best_cat = actual_category  # UI 및 다운로드 연동용 카테고리 업데이트
                             break
                 
-                # 3단계: 검색 결과 점수 기준 재정렬 및 UI 메시지 출력
+                # 3단계: 검색 결과 최우선 지침 파일 가중 정렬 및 UI 메시지 출력
+                global_best_score = 0.0
                 if len(relevant_chunks) > 0:
-                    relevant_chunks = sorted(relevant_chunks, key=lambda x: x["score"], reverse=True)
+                    global_best_score = max(c["score"] for c in relevant_chunks)
+                    
+                    is_money_query = (best_cat in ["예산", "지출", "세입"])
+                    is_contract_query = (best_cat == "계약")
+                    
+                    priority_chunks = []
+                    other_chunks = []
+                    
+                    from core.vector_db import get_filename_from_metadata
+                    for c in relevant_chunks:
+                        metadata = c.get("metadata", "")
+                        filename = get_filename_from_metadata(metadata)
+                        
+                        is_priority_file = False
+                        if is_money_query and "예산편성 기본지침" in filename:
+                            is_priority_file = True
+                        elif is_contract_query and "계약업무 처리지침" in filename:
+                            is_priority_file = True
+                            
+                        if is_priority_file:
+                            priority_chunks.append(c)
+                        else:
+                            other_chunks.append(c)
+                            
+                    priority_chunks = sorted(priority_chunks, key=lambda x: x["score"], reverse=True)
+                    other_chunks = sorted(other_chunks, key=lambda x: x["score"], reverse=True)
+                    relevant_chunks = priority_chunks + other_chunks
+                    
                     if len(searched_cats) > 1:
                         st.write(f"📊 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개) - {searched_cats} 폴더 채택 및 교차 병합 완료")
                     else:
@@ -958,10 +999,10 @@ def render_qa_content():
                     seen_contents.add(c['content_llm'])
 
             if unique_chunks:
-                best_score = unique_chunks[0]['score']
-                if best_score >= 0.85: unique_chunks = unique_chunks[:3]
-                elif best_score >= 0.75: unique_chunks = unique_chunks[:6]
-                elif best_score >= 0.60: unique_chunks = unique_chunks[:10]
+                best_score = global_best_score if 'global_best_score' in locals() and global_best_score > 0 else unique_chunks[0]['score']
+                if best_score >= 0.85: unique_chunks = unique_chunks[:8]
+                elif best_score >= 0.75: unique_chunks = unique_chunks[:10]
+                elif best_score >= 0.60: unique_chunks = unique_chunks[:12]
 
             if unique_chunks:
                 context_text = "\n\n".join([f"[{c['metadata']}] (유사도: {c['score']:.4f})\n{c['content_llm']}" for c in unique_chunks])
