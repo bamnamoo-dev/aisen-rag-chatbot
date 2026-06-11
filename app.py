@@ -195,7 +195,7 @@ if st.session_state.current_tab == "지침서":
         st.session_state.messages = []
         if "chat" in st.session_state: del st.session_state.chat
         st.session_state.show_manual = False
-        st.sidebar.rerun() if hasattr(st.sidebar, 'rerun') else st.rerun()
+        st.rerun()
         
     st.sidebar.markdown("<div style='margin-top: 6px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
