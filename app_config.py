@@ -399,4 +399,31 @@ GLOBAL_CSS = """
         color: #0f172a !important;
     }
     </style>
+    <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'/%3E" onload="
+        if (!window.scrollOverrideDone) {
+            window.scrollOverrideDone = true;
+            const originalScrollIntoView = Element.prototype.scrollIntoView;
+            Element.prototype.scrollIntoView = function(options) {
+                const scrollPos = window.innerHeight + window.scrollY;
+                const threshold = document.documentElement.scrollHeight - 150;
+                if (scrollPos < threshold) {
+                    return;
+                }
+                originalScrollIntoView.apply(this, arguments);
+            };
+            const originalScrollTo = window.scrollTo;
+            window.scrollTo = function(x, y) {
+                let targetY = y;
+                if (typeof x === 'object' && x !== null) {
+                    targetY = x.top;
+                }
+                const scrollPos = window.innerHeight + window.scrollY;
+                const threshold = document.documentElement.scrollHeight - 150;
+                if (scrollPos < threshold && targetY > window.scrollY) {
+                    return;
+                }
+                originalScrollTo.apply(this, arguments);
+            };
+        }
+    " style="display:none;"/>
 """
