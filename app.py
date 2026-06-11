@@ -720,11 +720,15 @@ def render_qa_content():
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
                 
-                # 자동 분류 결과 안내 메시지 표시
+                # 자동 분류 및 슬래시 지정 결과 안내 메시지 표시
                 if message["role"] == "assistant" and message.get("routed_category"):
+                    route_type = "슬래시 지정" if message.get("is_slash_route") else "자동 분류"
+                    bg_color = "#f0fdf4" if message.get("is_slash_route") else "#fff7ed"
+                    border_color = "#16a34a" if message.get("is_slash_route") else "#ea580c"
+                    text_color = "#15803d" if message.get("is_slash_route") else "#c2410c"
                     st.markdown(f"""
-                        <div style="background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: #c2410c; margin-top: 6px; margin-bottom: 8px; display: inline-block;">
-                            📍 자동 분류 결과: <strong>{message['routed_category']}</strong> 분야 지침서 검색
+                        <div style="background-color: {bg_color}; border-left: 4px solid {border_color}; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: {text_color}; margin-top: 6px; margin-bottom: 8px; display: inline-block;">
+                            📍 {route_type} 결과: <strong>{message['routed_category']}</strong> 분야 지침서 검색
                         </div>
                     """, unsafe_allow_html=True)
                 
@@ -826,9 +830,9 @@ def render_qa_content():
         else:
             if st.session_state.current_tab == "지침서":
                 if selected_category == "⭐ 자동 분류":
-                    input_placeholder = "궁금하신 행정 업무에 대해 자유롭게 질문해 주세요. (자동 분류)"
+                    input_placeholder = "질문 입력 (예: /지출 수의계약 규정, /법령 지방공무원법)"
                 else:
-                    input_placeholder = f"{selected_category} 업무에 대해 질문해 주세요."
+                    input_placeholder = f"{selected_category} 업무에 대해 질문해 주세요. (예: /지출 수의계약 규정)"
             else:
                 law_example = "지방공무원법상 직위해제" if selected_category == "상위법령" else "공무원 복무 조례상 특별휴가"
                 input_placeholder = f"궁금하신 {selected_category}에 대해 질문해 주세요. (예: {law_example})"
@@ -845,6 +849,23 @@ def render_qa_content():
             with st.chat_message("user"):
                 st.markdown(prompt)
 
+            # 슬래시 명령어 파싱
+            search_prompt = prompt
+            slash_category = None
+            
+            slash_match = re.match(r"^/([^\s]+)\s+(.*)$", prompt.strip())
+            if slash_match:
+                cmd = slash_match.group(1)
+                remaining_prompt = slash_match.group(2).strip()
+                
+                # 모든 카테고리 목록 (상위법령, 자치법규 포함, 조례규칙 제외)
+                categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["조례규칙"]]
+                cmd_mapped = "상위법령" if cmd == "법령" else cmd
+                
+                if cmd_mapped in categories_raw:
+                    slash_category = cmd_mapped
+                    search_prompt = remaining_prompt
+
             with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
                 # Determine actual category and database dynamically if in Auto Routing mode
                 actual_category = selected_category
@@ -854,16 +875,18 @@ def render_qa_content():
                 
                 # 감사 폴더 필터링 정의 (감사 키워드 누락 시 매핑 방지)
                 is_audit_query = False
-                if "감사" in prompt:
-                    clean_prompt = prompt.replace("감사합니다", "").replace("감사드립니다", "").replace("감사해요", "").replace("감사함다", "").strip()
+                if "감사" in search_prompt:
+                    clean_prompt = search_prompt.replace("감사합니다", "").replace("감사드립니다", "").replace("감사해요", "").replace("감사함다", "").strip()
                     if "감사" in clean_prompt:
                         is_audit_query = True
                 
-                if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
+                if slash_category:
+                    best_cat = slash_category
+                elif selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
                     from core.vector_db import route_query_by_keywords
                     categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
                     categories_list = sorted(categories_raw, key=lambda x: (1 if "기타" in x else 0, x))
-                    best_cat = route_query_by_keywords(prompt, categories_list, return_candidates=False)
+                    best_cat = route_query_by_keywords(search_prompt, categories_list, return_candidates=False)
                 else:
                     best_cat = selected_category
                 
@@ -910,7 +933,7 @@ def render_qa_content():
                         folder_hash=current_folder_hash
                     )
                     
-                    chunks_for_cat = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+                    chunks_for_cat = retrieve_top_chunks(search_prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
                     if len(chunks_for_cat) > 0:
                         relevant_chunks.extend(chunks_for_cat)
                         if actual_category not in searched_cats:
@@ -940,7 +963,7 @@ def render_qa_content():
                             rebuild_trigger=st.session_state.rebuild_trigger,
                             folder_hash=current_folder_hash
                         )
-                        chunks_for_cat = retrieve_top_chunks(prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
+                        chunks_for_cat = retrieve_top_chunks(search_prompt, active_db, client, k=15, threshold=0.4, model_name=LOCAL_MODEL_NAME)
                         if len(chunks_for_cat) > 0:
                             relevant_chunks.extend(chunks_for_cat)
                             searched_cats.append(actual_category)
@@ -984,7 +1007,7 @@ def render_qa_content():
                         st.write(f"📊 유사도 기준 필터링 완료 (유사도 0.4 이상 선별된 청크 수: {len(relevant_chunks)}개) - [{best_cat}] 폴더 채택")
                 
                 actual_category = best_cat
-                if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
+                if (slash_category or selected_category == "⭐ 자동 분류") and st.session_state.current_tab == "지침서":
                     routed_category_name = best_cat
                 
                 time.sleep(0.2)
@@ -1039,7 +1062,7 @@ def render_qa_content():
                             
                             response_stream = client.models.generate_content_stream(
                                 model=gen_model,
-                                contents=history + [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
+                                contents=history + [types.Content(role="user", parts=[types.Part.from_text(text=search_prompt)])],
                                 config=types.GenerateContentConfig(
                                     system_instruction=system_prompt,
                                     temperature=0.3,
@@ -1059,7 +1082,7 @@ def render_qa_content():
                                     model_name=gen_model.replace("models/", ""),
                                     system_instruction=system_prompt
                                 )
-                                legacy_response = legacy_model.generate_content(prompt)
+                                legacy_response = legacy_model.generate_content(search_prompt)
                                 full_response = legacy_response.text
                                 break
                             except Exception as legacy_error:
@@ -1100,7 +1123,8 @@ def render_qa_content():
                             "referenced_files": [c['metadata'] for c in unique_chunks] if unique_chunks else [],
                             "unique_chunks": unique_chunks,
                             "recommendations": recommendations,
-                            "routed_category": routed_category_name
+                            "routed_category": routed_category_name,
+                            "is_slash_route": True if slash_category else False
                         })
                     else:
                         st.session_state.legal_messages.append({
@@ -1141,7 +1165,10 @@ def render_qa_content():
                         <span style="font-size: 1.25rem; flex-shrink: 0; line-height: 1;">💡</span>
                         <div>
                             <strong>시작 가이드</strong>
-                            <p style="margin: 4px 0 0 0; line-height: 1.5;">좌측의 <span style="font-weight: 700; color: #1e60ff;">[ACTIVE CHANNELS]</span> 업무 카드 중 하나를 선택해 대화를 시작해 보세요. 카테고리가 활성화되면 해당 분야의 지침서 다운로드도 제공됩니다.</p>
+                            <p style="margin: 4px 0 0 0; line-height: 1.5;">
+                                1. 좌측의 <span style="font-weight: 700; color: #1e60ff;">[ACTIVE CHANNELS]</span> 업무 카드 중 하나를 선택해 대화를 시작해 보세요.<br>
+                                2. 혹은 질문 입력창에 <span style="font-weight: 700; color: #1e60ff;">/지출 수의계약</span> 또는 <span style="font-weight: 700; color: #1e60ff;">/법령 지방공무원법</span>과 같이 슬래시 명령어를 입력하면 해당 카테고리를 강제 지정하여 실시간으로 정확하게 검색할 수 있습니다.
+                            </p>
                         </div>
                     </div>
                 </div>
