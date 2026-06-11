@@ -24,7 +24,7 @@ importlib.reload(services.llm_service)
 
 # 2. 필요한 함수/상수 임포트
 from app_config import get_system_prompt, get_category_emoji, GLOBAL_CSS, get_legal_system_prompt
-from core.vector_db import build_vector_db, retrieve_top_chunks, get_file_hash
+from core.vector_db import build_vector_db, retrieve_top_chunks, get_file_hash, get_folder_hash
 from services.llm_service import get_genai_client, get_generation_model_name
 
 # 환경변수 로드
@@ -96,8 +96,8 @@ if "show_manual" not in st.session_state:
 manuals_root = "manuals"
 
 # 파일 바이너리 로더
-@st.cache_data
-def get_file_binary(file_path):
+@st.cache_data(max_entries=3)
+def get_file_binary(file_path, mtime=0.0):
     with open(file_path, "rb") as f: return f.read()
 
 # UI 기본 설정
@@ -247,7 +247,7 @@ if st.session_state.current_tab == "지침서":
                     display_name = f[:-4] if f.lower().endswith('.pdf') else f
                     st.download_button(
                         label=f"⬇️ {display_name}", 
-                        data=get_file_binary(f_path), 
+                        data=get_file_binary(f_path, mtime=os.path.getmtime(f_path)), 
                         file_name=f, 
                         key=f"dl_{f}", 
                         use_container_width=True
@@ -302,7 +302,7 @@ else:
                 display_name = display_name[:-4] if display_name.lower().endswith('.pdf') else display_name
                 st.download_button(
                     label=f"⬇️ {display_name}", 
-                    data=get_file_binary(f_path), 
+                    data=get_file_binary(f_path, mtime=os.path.getmtime(f_path)), 
                     file_name=f, 
                     key=f"dl_law_{f}", 
                     use_container_width=True
@@ -534,6 +534,8 @@ if admin_mode:
             col_build, col_clear = st.columns(2)
             with col_build:
                 if st.button("⚡ 변경/신규 파일 증분 분석 시작", key="btn_run_build", type="primary", use_container_width=True):
+                    cat_path_manage = os.path.join(manuals_root, manage_category)
+                    current_folder_hash = get_folder_hash(cat_path_manage, LOCAL_MODEL_NAME)
                     with st.spinner(f"'{manage_category}' 분야 지침서 증분 인덱싱 중..."):
                         rebuilt_db = build_vector_db(
                             category=manage_category,
@@ -541,7 +543,8 @@ if admin_mode:
                             admin_mode=True,
                             _client=client,
                             model_name=LOCAL_MODEL_NAME,
-                            rebuild_trigger=time.time()
+                            rebuild_trigger=time.time(),
+                            folder_hash=current_folder_hash
                         )
                         if rebuilt_db and rebuilt_db.chunks:
                             st.success(f"🎉 성공적으로 '{manage_category}' 벡터 인덱싱이 빌드/업데이트되었습니다! (총 {len(rebuilt_db.chunks)}개 청크)")
@@ -556,6 +559,8 @@ if admin_mode:
                             os.remove(cache_file)
                         except Exception as e:
                             st.error(f"캐시 삭제 실패: {e}")
+                    cat_path_manage = os.path.join(manuals_root, manage_category)
+                    current_folder_hash = get_folder_hash(cat_path_manage, LOCAL_MODEL_NAME)
                     with st.spinner(f"'{manage_category}' 지침서 전체 초기화 후 신규 빌드 중..."):
                         rebuilt_db = build_vector_db(
                             category=manage_category,
@@ -563,7 +568,8 @@ if admin_mode:
                             admin_mode=True,
                             _client=client,
                             model_name=LOCAL_MODEL_NAME,
-                            rebuild_trigger=time.time()
+                            rebuild_trigger=time.time(),
+                            folder_hash=current_folder_hash
                         )
                         if rebuilt_db and rebuilt_db.chunks:
                             st.success("🎉 인덱스가 정상적으로 전체 재빌드되었습니다!")
@@ -625,6 +631,8 @@ def render_qa_content():
         st.stop()
 
     if selected_category:
+        cat_path = os.path.join(manuals_root, selected_category)
+        current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
         with st.spinner(f"AI가 '{selected_category}' 지침 도서관을 구축 중입니다..."):
             db = build_vector_db(
                 category=selected_category, 
@@ -632,7 +640,8 @@ def render_qa_content():
                 admin_mode=admin_mode, 
                 _client=client, 
                 model_name=LOCAL_MODEL_NAME,
-                rebuild_trigger=st.session_state.rebuild_trigger
+                rebuild_trigger=st.session_state.rebuild_trigger,
+                folder_hash=current_folder_hash
             )
         
         db_stats = db

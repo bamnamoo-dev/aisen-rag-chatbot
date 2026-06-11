@@ -328,8 +328,8 @@ def get_folder_hash(folder_path, model_name):
             hasher.update(str(os.path.getsize(f_path)).encode())
     return hasher.hexdigest()
 
-@st.cache_resource
-def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gemini-embedding-2", rebuild_trigger=0):
+@st.cache_resource(max_entries=3)
+def build_vector_db(category, manuals_root, admin_mode, _client, model_name="gemini-embedding-2", rebuild_trigger=0, folder_hash=""):
     """지침서 폴더의 PDF들을 분석하여 로컬 벡터 DB 구축 및 FAISS 인덱싱"""
     cat_path = os.path.join(manuals_root, category)
     current_hash = get_folder_hash(cat_path, model_name)
