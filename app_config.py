@@ -398,56 +398,5 @@ GLOBAL_CSS = """
         font-size: 0.95rem !important;
         color: #0f172a !important;
     }
-    </style>
-    <img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'/%3E" onload="
-        if (!window.scrollOverrideDone) {
-            window.scrollOverrideDone = true;
-            const originalScrollIntoView = Element.prototype.scrollIntoView;
-            Element.prototype.scrollIntoView = function(options) {
-                const scrollPos = window.innerHeight + window.scrollY;
-                const threshold = document.documentElement.scrollHeight - 150;
-                const userManuallyScrolledUp = scrollPos < threshold;
-                
-                let questionReachedTop = false;
-                const messages = document.querySelectorAll('[data-testid=stChatMessage]');
-                if (messages.length >= 2) {
-                    const userMsg = messages[messages.length - 2];
-                    const rect = userMsg.getBoundingClientRect();
-                    if (rect.top <= 20) {
-                        questionReachedTop = true;
-                    }
-                }
-                
-                if (userManuallyScrolledUp || questionReachedTop) {
-                    return;
-                }
-                originalScrollIntoView.apply(this, arguments);
-            };
-            const originalScrollTo = window.scrollTo;
-            window.scrollTo = function(x, y) {
-                let targetY = y;
-                if (typeof x === 'object' && x !== null) {
-                    targetY = x.top;
-                }
-                const scrollPos = window.innerHeight + window.scrollY;
-                const threshold = document.documentElement.scrollHeight - 150;
-                const userManuallyScrolledUp = scrollPos < threshold;
-                
-                let questionReachedTop = false;
-                const messages = document.querySelectorAll('[data-testid=stChatMessage]');
-                if (messages.length >= 2) {
-                    const userMsg = messages[messages.length - 2];
-                    const rect = userMsg.getBoundingClientRect();
-                    if (rect.top <= 20) {
-                        questionReachedTop = true;
-                    }
-                }
-                
-                if ((userManuallyScrolledUp || questionReachedTop) && targetY > window.scrollY) {
-                    return;
-                }
-                originalScrollTo.apply(this, arguments);
-            };
-        }
-    " style="display:none;"/>
+    </style><img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'/%3E" onload="if(!window.scrollOverrideDone){window.scrollOverrideDone=true;const originalScrollIntoView=Element.prototype.scrollIntoView;Element.prototype.scrollIntoView=function(options){const scrollPos=window.innerHeight+window.scrollY;const threshold=document.documentElement.scrollHeight-150;const userManuallyScrolledUp=Math.sign(threshold-scrollPos)===1;let questionReachedTop=false;const messages=document.querySelectorAll('[data-testid=stChatMessage]');if(Math.sign(messages.length-1.5)===1){const userMsg=messages[messages.length-2];const rect=userMsg.getBoundingClientRect();if(Math.sign(20-rect.top)!==-1){questionReachedTop=true;}}if(userManuallyScrolledUp||questionReachedTop){return;}originalScrollIntoView.apply(this,arguments);};const originalScrollTo=window.scrollTo;window.scrollTo=function(x,y){let targetY=y;if(typeof x==='object'&&x!==null){targetY=x.top;}const scrollPos=window.innerHeight+window.scrollY;const threshold=document.documentElement.scrollHeight-150;const userManuallyScrolledUp=Math.sign(threshold-scrollPos)===1;let questionReachedTop=false;const messages=document.querySelectorAll('[data-testid=stChatMessage]');if(Math.sign(messages.length-1.5)===1){const userMsg=messages[messages.length-2];const rect=userMsg.getBoundingClientRect();if(Math.sign(20-rect.top)!==-1){questionReachedTop=true;}}if((userManuallyScrolledUp||questionReachedTop)&&Math.sign(targetY-window.scrollY)===1){return;}originalScrollTo.apply(this,arguments);};}" style="display:none;"/>
 """
