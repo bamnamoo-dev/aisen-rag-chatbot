@@ -797,12 +797,6 @@ def route_query_by_keywords(query, categories, return_candidates=False):
             for token in expanded_tokens:
                 if token == kw:
                     scores[cat] += 3
-                    
-    # 5.5 돈/예산/회계/세입/세출/재정/지출 등 돈 관련 질문 발생 시 '예산' 카테고리에 높은 우선순위 가중치 부여
-    finance_priority_keywords = ["돈", "예산", "회계", "세입", "세출", "재정", "자금", "결산", "지출", "세입세출", "업무추진비", "협의회비", "추진비", "회비", "운영비", "사업비", "급량비", "수수료", "비용", "판공비", "여비"]
-    if any(fp_kw in query for fp_kw in finance_priority_keywords):
-        if "예산" in scores:
-            scores["예산"] += 20
 
     # 6. 최다 매칭 점수 카테고리 선정
     sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -816,16 +810,11 @@ def route_query_by_keywords(query, categories, return_candidates=False):
         else:
             best_cat = categories[0] if categories else None
             
-    # 7.5 돈/세입/세출/지출 관련 질문은 가장 포괄적이고 기본적인 지침이 수록된 '예산' 폴더(예산편성 기본지침 등)를 우선 조회하도록 라우팅 통합
-    original_best = best_cat
-    if best_cat in ["지출", "세입"]:
-        if "예산" in categories:
-            best_cat = "예산"
-            
     if return_candidates:
         candidates = [best_cat]
-        if original_best != best_cat and original_best not in candidates:
-            candidates.append(original_best)
-        return candidates
+        for cat, score in sorted_scores:
+            if cat not in candidates:
+                candidates.append(cat)
+        return candidates[:3]
         
     return best_cat
