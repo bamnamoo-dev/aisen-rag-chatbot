@@ -438,8 +438,22 @@ if admin_mode:
             if has_cache:
                 try:
                     import pickle
-                    with open(cache_file, "rb") as f:
-                        cache_info = pickle.load(f)
+                    import gzip
+                    is_gzipped = False
+                    try:
+                        with open(cache_file, "rb") as f_test:
+                            magic = f_test.read(2)
+                            if magic == b'\x1f\x8b':
+                                is_gzipped = True
+                    except Exception:
+                        pass
+                    
+                    if is_gzipped:
+                        with gzip.open(cache_file, "rb") as f:
+                            cache_info = pickle.load(f)
+                    else:
+                        with open(cache_file, "rb") as f:
+                            cache_info = pickle.load(f)
                 except Exception:
                     pass
             

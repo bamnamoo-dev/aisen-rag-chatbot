@@ -89,13 +89,20 @@ class LocalVectorDB:
                 "files": {}
             }
         
-        # 최종 병합된 chunks와 embeddings를 탑레벨에도 캐시하여 고속 로딩 지원
+        # 최종 병합된 chunks와 embeddings를 탑레벨에도 설정하되, 중복 저장 방지를 위해 얕은 복사 후 제거하여 저장
         self.file_cache["hash"] = current_hash
         self.file_cache["chunks"] = self.chunks
         self.file_cache["embeddings"] = self.embeddings
         
-        with open(cache_file, "wb") as f:
-            pickle.dump(self.file_cache, f)
+        save_data = self.file_cache.copy()
+        if "chunks" in save_data:
+            del save_data["chunks"]
+        if "embeddings" in save_data:
+            del save_data["embeddings"]
+            
+        import gzip
+        with gzip.open(cache_file, "wb") as f:
+            pickle.dump(save_data, f)
 
     def load_local(self, folder_path, current_hash):
         """로컬 파일에서 인덱싱된 데이터를 로드하고 FAISS 인덱스 재빌드"""
@@ -103,8 +110,22 @@ class LocalVectorDB:
         if not os.path.exists(cache_file):
             return False
         try:
-            with open(cache_file, "rb") as f:
-                data = pickle.load(f)
+            import gzip
+            is_gzipped = False
+            try:
+                with open(cache_file, "rb") as f_test:
+                    magic = f_test.read(2)
+                    if magic == b'\x1f\x8b':
+                        is_gzipped = True
+            except Exception:
+                pass
+                
+            if is_gzipped:
+                with gzip.open(cache_file, "rb") as f:
+                    data = pickle.load(f)
+            else:
+                with open(cache_file, "rb") as f:
+                    data = pickle.load(f)
             
             # v1.0 구버전 캐시 마이그레이션 대응
             # v1.0 데이터의 경우 "version" 키가 없음
@@ -155,16 +176,39 @@ class LocalVectorDB:
                     data = migrated_data
                     is_v2 = True
                     
-                    # 마이그레이션된 v2 포맷을 즉시 디스크에 영구 저장
-                    with open(cache_file, "wb") as f_out:
-                        pickle.dump(data, f_out)
+                    # 마이그레이션된 v2 포맷을 즉시 디스크에 영구 저장 (gzip 압축 적용, 중복 제거)
+                    save_data = data.copy()
+                    if "chunks" in save_data:
+                        del save_data["chunks"]
+                    if "embeddings" in save_data:
+                        del save_data["embeddings"]
+                    import gzip
+                    with gzip.open(cache_file, "wb") as f_out:
+                        pickle.dump(save_data, f_out)
                 except Exception as migration_e:
                     st.sidebar.warning(f"⚠️ 구버전 캐시 자동 마이그레이션 실패: {migration_e}")
             
             # 1. 완벽한 해시 일치 시 즉시 로딩 (변경 없음)
-            if data.get("hash") == current_hash and data.get("chunks") is not None:
-                self.chunks = data["chunks"]
-                self.embeddings = data["embeddings"]
+            if data.get("hash") == current_hash:
+                if data.get("chunks") is not None:
+                    self.chunks = data["chunks"]
+                    self.embeddings = data["embeddings"]
+                else:
+                    # 탑레벨 캐시가 없는 경우 files에서 동적 복원
+                    merged_chunks = []
+                    merged_embs = []
+                    if "files" in data:
+                        for filename in sorted(data["files"].keys()):
+                            f_info = data["files"][filename]
+                            if f_info and f_info.get("chunks"):
+                                merged_chunks.extend(f_info["chunks"])
+                                if len(f_info.get("embeddings", [])) > 0:
+                                    merged_embs.append(f_info["embeddings"])
+                    self.chunks = merged_chunks
+                    if merged_embs:
+                        self.embeddings = np.vstack(merged_embs)
+                    else:
+                        self.embeddings = np.array([], dtype=np.float32)
                 self.file_cache = data
                 
                 # v2.0 캐시 파일에 'hash' 키가 없는 경우 보완 마이그레이션 수행
@@ -179,8 +223,14 @@ class LocalVectorDB:
                                 
                 if modified_cache:
                     try:
-                        with open(cache_file, "wb") as f_out:
-                            pickle.dump(data, f_out)
+                        save_data = data.copy()
+                        if "chunks" in save_data:
+                            del save_data["chunks"]
+                        if "embeddings" in save_data:
+                            del save_data["embeddings"]
+                        import gzip
+                        with gzip.open(cache_file, "wb") as f_out:
+                            pickle.dump(save_data, f_out)
                     except Exception:
                         pass
                         
