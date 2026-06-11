@@ -784,7 +784,19 @@ def route_query_by_keywords(query, categories, return_candidates=False):
             
     # 5. 각 카테고리별 매칭 카운팅 계산
     scores = {cat: 0 for cat in categories}
+    
+    # 감사 폴더 필터링 정의 (감사 키워드 누락 시 매핑 방지)
+    is_audit_query = False
+    if "감사" in query:
+        clean_query = query.replace("감사합니다", "").replace("감사드립니다", "").replace("감사해요", "").replace("감사함다", "").strip()
+        if "감사" in clean_query:
+            is_audit_query = True
+            
     for cat in categories:
+        if cat == "감사" and not is_audit_query:
+            scores[cat] = -9999
+            continue
+            
         keywords = category_keywords.get(cat, [])
         # 카테고리 폴더명 자체가 질문에 명시적으로 들어가는지 보너스 체크
         if cat in query:
@@ -803,12 +815,13 @@ def route_query_by_keywords(query, categories, return_candidates=False):
     best_cat, best_score = sorted_scores[0]
     
     # 7. 만약 매칭 점수가 0점(아무 키워드도 안 걸림)이라면,
-    # 카테고리 목록 중 "기타"가 존재하면 기타로 보내고, 없으면 첫 번째 카테고리 반환
-    if best_score == 0:
+    # 카테고리 목록 중 "기타"가 존재하면 기타로 보내고, 없으면 감사 폴더를 배제한 첫 번째 카테고리 반환
+    if best_score <= 0 or (best_cat == "감사" and not is_audit_query):
         if "기타" in categories:
             best_cat = "기타"
         else:
-            best_cat = categories[0] if categories else None
+            non_audit_cats = [cat for cat in categories if cat != "감사"]
+            best_cat = non_audit_cats[0] if non_audit_cats else (categories[0] if categories else None)
             
     if return_candidates:
         candidates = [best_cat]

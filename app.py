@@ -852,6 +852,13 @@ def render_qa_content():
                 routed_category_name = None
                 relevant_chunks = []
                 
+                # 감사 폴더 필터링 정의 (감사 키워드 누락 시 매핑 방지)
+                is_audit_query = False
+                if "감사" in prompt:
+                    clean_prompt = prompt.replace("감사합니다", "").replace("감사드립니다", "").replace("감사해요", "").replace("감사함다", "").strip()
+                    if "감사" in clean_prompt:
+                        is_audit_query = True
+                
                 if selected_category == "⭐ 자동 분류" and st.session_state.current_tab == "지침서":
                     from core.vector_db import route_query_by_keywords
                     categories_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d)) and d not in ["상위법령", "자치법규", "조례규칙"]]
@@ -906,6 +913,8 @@ def render_qa_content():
                     fallback_candidates = [cat for cat in categories_list if cat not in search_categories]
                     
                     for cat in fallback_candidates:
+                        if cat == "감사" and not is_audit_query:
+                            continue
                         actual_category = cat
                         cat_path = os.path.join(manuals_root, actual_category)
                         current_folder_hash = get_folder_hash(cat_path, LOCAL_MODEL_NAME)
