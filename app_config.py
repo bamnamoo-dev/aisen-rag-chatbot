@@ -364,6 +364,22 @@ GLOBAL_CSS = """
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 16px rgba(30, 96, 255, 0.2) !important;
     }
+    /* 텍스트 입력창 테두리 가시성 개선 (비밀번호 및 일반 입력칸) */
+    div[data-testid="stTextInput"] [data-baseweb="input"] {
+        border: 2px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        background-color: #ffffff !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }
+    div[data-testid="stTextInput"] [data-baseweb="input"]:focus-within {
+        border-color: #1e60ff !important;
+        box-shadow: 0 0 0 3px rgba(30, 96, 255, 0.15) !important;
+    }
+    div[data-testid="stTextInput"] input {
+        border: none !important;
+        background-color: transparent !important;
+        color: #0f172a !important;
+    }
     /* stChatInput 스타일 커스텀 */
     [data-testid="stChatInput"] {
         border-radius: 16px !important;

@@ -16,16 +16,19 @@ import app_config
 import core.parser
 import core.vector_db
 import services.llm_service
+import core.faq_service
 
 importlib.reload(app_config)
 importlib.reload(core.parser)
 importlib.reload(core.vector_db)
 importlib.reload(services.llm_service)
+importlib.reload(core.faq_service)
 
 # 2. 필요한 함수/상수 임포트
 from app_config import get_system_prompt, get_category_emoji, GLOBAL_CSS, get_legal_system_prompt
 from core.vector_db import build_vector_db, retrieve_top_chunks, get_file_hash, get_folder_hash
 from services.llm_service import get_genai_client, get_generation_model_name
+from core.faq_service import search_faq, register_faq
 
 # 환경변수 로드
 load_dotenv()
@@ -152,7 +155,7 @@ if os.path.exists(manual_file_path):
         pass
 
 
-if admin_mode:
+if st.session_state.admin_mode:
     st.sidebar.markdown("""
         <div style="background-color: #fff1f2; color: #e11d48; border: 1px solid #ffe4e6; border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(225, 29, 72, 0.03);">
             <span style="color: #e11d48; font-size: 1rem;">⚙️</span> [관리자 모드] 활성화됨
@@ -364,16 +367,9 @@ st.sidebar.caption("💡 **안내 및 면책 조항**: 본 서비스는 교육�
 # ----------------------------------------------------
 selected_category = st.session_state.selected_category
 
-# 사용자가 관리자 로그인 상태인 경우, 상단 탭을 통해 대시보드와 Q&A를 구분
-admin_tab_qa, admin_tab_dashboard = None, None
-if admin_mode:
-    main_tabs = st.tabs(["💬 대화형 Q&A", "⚙️ RAG 관리자 대시보드"])
-    admin_tab_qa = main_tabs[0]
-    admin_tab_dashboard = main_tabs[1]
-
 # 1. 관리자 모드인 경우 대시보드 뷰 정의
-if admin_mode:
-    with admin_tab_dashboard:
+def render_admin_dashboard():
+    if True:
         st.markdown("""
             <div style="background: linear-gradient(135deg, #475569 0%, #1e293b 100%); color: white; padding: 20px 28px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
                 <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0 0 4px 0; color: white;">⚙️ RAG 지침 도서관 관리자 대시보드</h2>
@@ -661,7 +657,7 @@ def render_qa_content():
                 db = build_vector_db(
                     category=selected_category, 
                     manuals_root=manuals_root, 
-                    admin_mode=admin_mode, 
+                    admin_mode=st.session_state.admin_mode, 
                     _client=client, 
                     model_name=LOCAL_MODEL_NAME,
                     rebuild_trigger=st.session_state.rebuild_trigger,
@@ -713,12 +709,73 @@ def render_qa_content():
                 </div>
             """, unsafe_allow_html=True)
 
+        # FAQ 등록 편집기 폼 (관리자 모드 활성화 시 작동)
+        if st.session_state.admin_mode and "faq_register_target" in st.session_state:
+            target = st.session_state.faq_register_target
+            st.markdown("""
+                <div style="background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="margin-top: 0; margin-bottom: 4px; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        ⚙️ FAQ (자주하는 질문) 신규 등록 편집기
+                    </h4>
+                    <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 12px 0;">이전 대화 중 좋은 답변을 FAQ 데이터베이스에 등록합니다. 질문과 답변을 다듬을 수 있습니다.</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            with st.form(key="faq_register_form"):
+                edit_cat = st.text_input("카테고리 분야", value=target["category"])
+                edit_q = st.text_area("등록할 질문 (유사도 매칭의 기준이 됩니다)", value=target["question"], height=80)
+                edit_a = st.text_area("등록할 표준 답변", value=target["answer"], height=200)
+                
+                rec_str = ", ".join(target.get("recommendations", []))
+                edit_rec = st.text_input("추천 질문 목록 (쉼표로 구분)", value=rec_str)
+                
+                col_submit, col_cancel = st.columns([1, 1])
+                with col_submit:
+                    submit_register = st.form_submit_button("💾 FAQ 데이터베이스에 최종 등록", use_container_width=True, type="primary")
+                with col_cancel:
+                    cancel_register = st.form_submit_button("❌ 취소", use_container_width=True)
+                    
+                if submit_register:
+                    if not edit_q.strip() or not edit_a.strip():
+                        st.error("질문과 답변은 필수 입력 사항입니다.")
+                    else:
+                        with st.spinner("구글 임베딩 API 호출 및 FAQ 파일 갱신 중..."):
+                            new_recs = [r.strip() for r in edit_rec.split(",") if r.strip()]
+                            success = register_faq(
+                                question=edit_q.strip(),
+                                answer=edit_a.strip(),
+                                category=edit_cat.strip(),
+                                client=client,
+                                model_name=LOCAL_MODEL_NAME,
+                                manuals_root=manuals_root,
+                                recommendations=new_recs
+                            )
+                            if success:
+                                st.toast("🎉 FAQ 등록 완료! 추후 유사 질문 시 API 없이 즉시 답변됩니다.", icon="💾")
+                                del st.session_state.faq_register_target
+                                time.sleep(0.5)
+                                st.rerun()
+                            else:
+                                st.error("FAQ 등록 중 오류가 발생했습니다. 구글 API 상태를 확인하세요.")
+                                
+                if cancel_register:
+                    del st.session_state.faq_register_target
+                    st.rerun()
+
         # 선택된 탭에 따른 대화 기록 로드
         chat_history = st.session_state.messages if st.session_state.current_tab == "지침서" else st.session_state.legal_messages
 
         for idx, message in enumerate(chat_history):
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
+                
+                # FAQ 캐시 응답 배지 노출
+                if message["role"] == "assistant" and message.get("is_faq_cache"):
+                    st.markdown(f"""
+                        <div style="background-color: #eff6ff; border-left: 4px solid #1e60ff; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; color: #1e60ff; margin-top: 6px; margin-bottom: 8px; display: inline-block;">
+                            💡 FAQ (자주하는 질문) 사전 등록 답변 (매칭 유사도: {message.get('faq_score', 0.0)*100:.1f}%)
+                        </div>
+                    """, unsafe_allow_html=True)
                 
                 # 자동 분류 및 슬래시 지정 결과 안내 메시지 표시
                 if message["role"] == "assistant" and message.get("routed_category"):
@@ -755,6 +812,26 @@ def render_qa_content():
                 
                 # 피드백 수집기 연동
                 if message["role"] == "assistant":
+                    # 관리자 모드인 경우 FAQ 등록 단추 제공
+                    if st.session_state.admin_mode:
+                        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                        if st.button("📌 이 답변을 FAQ에 등록", key=f"btn_reg_faq_{idx}", type="secondary", use_container_width=True):
+                            # 질문 추출 (슬래시 명령어 제거)
+                            user_q = chat_history[idx-1]["content"] if idx > 0 else "이전 질문 없음"
+                            clean_q = user_q
+                            slash_m = re.match(r"^/([^\s]+)\s+(.*)$", user_q.strip())
+                            if slash_m:
+                                clean_q = slash_m.group(2).strip()
+                                
+                            st.session_state.faq_register_target = {
+                                "idx": idx,
+                                "question": clean_q,
+                                "answer": message["content"],
+                                "category": message.get("routed_category") or selected_category,
+                                "recommendations": message.get("recommendations", [])
+                            }
+                            st.rerun()
+
                     msg_cat = message.get("routed_category") or selected_category
                     if message.get("feedback"):
                         val = message["feedback"]
@@ -867,6 +944,48 @@ def render_qa_content():
                     search_prompt = remaining_prompt
 
             with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
+                # ----------------------------------------------------
+                # FAQ 시맨틱 캐시 우선 탐색 (API 호출 및 RAG 탐색 전 스캔)
+                # ----------------------------------------------------
+                status.write("🛰️ 로컬 FAQ 캐시에서 즉시 답변이 가능한지 검색 중...")
+                matched_faq, sim_score = search_faq(
+                    query_text=search_prompt,
+                    client=client,
+                    model_name=LOCAL_MODEL_NAME,
+                    threshold=0.85,
+                    manuals_root=manuals_root
+                )
+                
+                if matched_faq:
+                    status.update(label="⚡ FAQ 캐시 매치 완료! 즉시 답변합니다.", state="complete", expanded=False)
+                    faq_ans = matched_faq["answer"]
+                    faq_cat = matched_faq.get("category", "⭐ 자동 분류")
+                    faq_recs = matched_faq.get("recommendations", [])
+                    
+                    if st.session_state.current_tab == "지침서":
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": faq_ans,
+                            "is_faq_cache": True,
+                            "faq_score": sim_score,
+                            "routed_category": faq_cat,
+                            "unique_chunks": [],
+                            "recommendations": faq_recs,
+                            "is_slash_route": True if slash_category else False
+                        })
+                    else:
+                        st.session_state.legal_messages.append({
+                            "role": "assistant",
+                            "content": faq_ans,
+                            "is_faq_cache": True,
+                            "faq_score": sim_score,
+                            "routed_category": faq_cat,
+                            "unique_chunks": [],
+                            "recommendations": faq_recs
+                        })
+                    st.toast("💡 FAQ 캐시 매칭 성공! 즉시 응답을 출력합니다.", icon="⚡")
+                    time.sleep(0.5)
+                    st.rerun()
                 # Determine actual category and database dynamically if in Auto Routing mode
                 actual_category = selected_category
                 active_db = db
@@ -926,7 +1045,7 @@ def render_qa_content():
                     active_db = build_vector_db(
                         category=actual_category, 
                         manuals_root=manuals_root, 
-                        admin_mode=admin_mode, 
+                        admin_mode=st.session_state.admin_mode, 
                         _client=client, 
                         model_name=LOCAL_MODEL_NAME,
                         rebuild_trigger=st.session_state.rebuild_trigger,
@@ -957,7 +1076,7 @@ def render_qa_content():
                         active_db = build_vector_db(
                             category=actual_category, 
                             manuals_root=manuals_root, 
-                            admin_mode=admin_mode, 
+                            admin_mode=st.session_state.admin_mode, 
                             _client=client, 
                             model_name=LOCAL_MODEL_NAME,
                             rebuild_trigger=st.session_state.rebuild_trigger,
@@ -1175,9 +1294,20 @@ def render_qa_content():
             </div>
         """, unsafe_allow_html=True)
 
-# 3. 탭 존재 유무에 맞춰 렌더링 호출
-if admin_mode:
-    with admin_tab_qa:
+# 3. 뷰 렌더링 호출
+if st.session_state.admin_mode:
+    # 가로형 버튼 그룹을 사용해 탭처럼 깔끔하게 뷰 전환
+    admin_view = st.radio(
+        "뷰 모드 선택",
+        ["💬 대화형 Q&A", "⚙️ RAG 관리자 대시보드"],
+        horizontal=True,
+        key="admin_view_select",
+        label_visibility="collapsed" # 레이블을 숨겨 탭처럼 만듦
+    )
+    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+    if admin_view == "💬 대화형 Q&A":
         render_qa_content()
+    else:
+        render_admin_dashboard()
 else:
     render_qa_content()
