@@ -709,58 +709,7 @@ def render_qa_content():
                 </div>
             """, unsafe_allow_html=True)
 
-        # FAQ 등록 편집기 폼 (관리자 모드 활성화 시 작동)
-        if st.session_state.admin_mode and "faq_register_target" in st.session_state:
-            target = st.session_state.faq_register_target
-            st.markdown("""
-                <div style="background-color: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                    <h4 style="margin-top: 0; margin-bottom: 4px; color: #0f172a; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                        ⚙️ FAQ (자주하는 질문) 신규 등록 편집기
-                    </h4>
-                    <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 12px 0;">이전 대화 중 좋은 답변을 FAQ 데이터베이스에 등록합니다. 질문과 답변을 다듬을 수 있습니다.</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            with st.form(key="faq_register_form"):
-                edit_cat = st.text_input("카테고리 분야", value=target["category"])
-                edit_q = st.text_area("등록할 질문 (유사도 매칭의 기준이 됩니다)", value=target["question"], height=80)
-                edit_a = st.text_area("등록할 표준 답변", value=target["answer"], height=200)
-                
-                rec_str = ", ".join(target.get("recommendations", []))
-                edit_rec = st.text_input("추천 질문 목록 (쉼표로 구분)", value=rec_str)
-                
-                col_submit, col_cancel = st.columns([1, 1])
-                with col_submit:
-                    submit_register = st.form_submit_button("💾 FAQ 데이터베이스에 최종 등록", use_container_width=True, type="primary")
-                with col_cancel:
-                    cancel_register = st.form_submit_button("❌ 취소", use_container_width=True)
-                    
-                if submit_register:
-                    if not edit_q.strip() or not edit_a.strip():
-                        st.error("질문과 답변은 필수 입력 사항입니다.")
-                    else:
-                        with st.spinner("구글 임베딩 API 호출 및 FAQ 파일 갱신 중..."):
-                            new_recs = [r.strip() for r in edit_rec.split(",") if r.strip()]
-                            success = register_faq(
-                                question=edit_q.strip(),
-                                answer=edit_a.strip(),
-                                category=edit_cat.strip(),
-                                client=client,
-                                model_name=LOCAL_MODEL_NAME,
-                                manuals_root=manuals_root,
-                                recommendations=new_recs
-                            )
-                            if success:
-                                st.toast("🎉 FAQ 등록 완료! 추후 유사 질문 시 API 없이 즉시 답변됩니다.", icon="💾")
-                                del st.session_state.faq_register_target
-                                time.sleep(0.5)
-                                st.rerun()
-                            else:
-                                st.error("FAQ 등록 중 오류가 발생했습니다. 구글 API 상태를 확인하세요.")
-                                
-                if cancel_register:
-                    del st.session_state.faq_register_target
-                    st.rerun()
+
 
         # 선택된 탭에 따른 대화 기록 로드
         chat_history = st.session_state.messages if st.session_state.current_tab == "지침서" else st.session_state.legal_messages
@@ -812,25 +761,78 @@ def render_qa_content():
                 
                 # 피드백 수집기 연동
                 if message["role"] == "assistant":
-                    # 관리자 모드인 경우 FAQ 등록 단추 제공
-                    if st.session_state.admin_mode:
-                        st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
-                        if st.button("📌 이 답변을 FAQ에 등록", key=f"btn_reg_faq_{idx}", type="secondary", use_container_width=True):
-                            # 질문 추출 (슬래시 명령어 제거)
-                            user_q = chat_history[idx-1]["content"] if idx > 0 else "이전 질문 없음"
-                            clean_q = user_q
-                            slash_m = re.match(r"^/([^\s]+)\s+(.*)$", user_q.strip())
-                            if slash_m:
-                                clean_q = slash_m.group(2).strip()
+                    # 만약 현재 카드가 FAQ 등록 대상으로 세팅되었다면, 바로 이 카드 하단에 인라인 폼을 노출합니다.
+                    if st.session_state.admin_mode and st.session_state.get("faq_register_target") and st.session_state.faq_register_target["idx"] == idx:
+                        target = st.session_state.faq_register_target
+                        st.markdown("""
+                            <div style="background-color: #f8fafc; border: 2.5px solid #1e60ff; border-radius: 12px; padding: 20px; margin-top: 15px; margin-bottom: 15px; text-align: left;">
+                                <h5 style="margin-top: 0; margin-bottom: 4px; color: #0f172a; font-weight: 800;">
+                                    ⚙️ FAQ 등록 편집기 (이 답변 커스터마이징)
+                                </h5>
+                                <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 10px 0;">이 답변의 내용을 대화 카드 하단에서 바로 편집하여 저장합니다.</p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        with st.form(key=f"faq_register_form_{idx}"):
+                            edit_cat = st.text_input("카테고리 분야", value=target["category"], key=f"faq_cat_in_{idx}")
+                            edit_q = st.text_area("등록할 질문", value=target["question"], height=80, key=f"faq_q_in_{idx}")
+                            edit_a = st.text_area("등록할 표준 답변", value=target["answer"], height=200, key=f"faq_a_in_{idx}")
+                            
+                            rec_str = ", ".join(target.get("recommendations", []))
+                            edit_rec = st.text_input("추천 질문 목록 (쉼표로 구분)", value=rec_str, key=f"faq_rec_in_{idx}")
+                            
+                            col_submit, col_cancel = st.columns([1, 1])
+                            with col_submit:
+                                submit_register = st.form_submit_button("💾 FAQ 최종 등록", use_container_width=True, type="primary")
+                            with col_cancel:
+                                cancel_register = st.form_submit_button("❌ 취소", use_container_width=True)
                                 
-                            st.session_state.faq_register_target = {
-                                "idx": idx,
-                                "question": clean_q,
-                                "answer": message["content"],
-                                "category": message.get("routed_category") or selected_category,
-                                "recommendations": message.get("recommendations", [])
-                            }
-                            st.rerun()
+                            if submit_register:
+                                if not edit_q.strip() or not edit_a.strip():
+                                    st.error("질문과 답변은 필수 입력 사항입니다.")
+                                else:
+                                    with st.spinner("임베딩 분석 및 로컬 FAQ 저장 중..."):
+                                        new_recs = [r.strip() for r in edit_rec.split(",") if r.strip()]
+                                        success = register_faq(
+                                            question=edit_q.strip(),
+                                            answer=edit_a.strip(),
+                                            category=edit_cat.strip(),
+                                            client=client,
+                                            model_name=LOCAL_MODEL_NAME,
+                                            manuals_root=manuals_root,
+                                            recommendations=new_recs
+                                        )
+                                        if success:
+                                            st.toast("🎉 FAQ 등록 완료! 유사 질문 시 API 없이 즉시 답변됩니다.", icon="💾")
+                                            del st.session_state.faq_register_target
+                                            time.sleep(0.5)
+                                            st.rerun()
+                                        else:
+                                            st.error("FAQ 등록 중 오류가 발생했습니다. 구글 API 상태를 확인하세요.")
+                                            
+                            if cancel_register:
+                                del st.session_state.faq_register_target
+                                st.rerun()
+                    else:
+                        # 평소 관리자 모드일 때는 FAQ 등록 버튼 노출
+                        if st.session_state.admin_mode:
+                            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+                            if st.button("📌 이 답변을 FAQ에 등록", key=f"btn_reg_faq_{idx}", type="secondary", use_container_width=True):
+                                # 질문 추출 (슬래시 명령어 제거)
+                                user_q = chat_history[idx-1]["content"] if idx > 0 else "이전 질문 없음"
+                                clean_q = user_q
+                                slash_m = re.match(r"^/([^\s]+)\s+(.*)$", user_q.strip())
+                                if slash_m:
+                                    clean_q = slash_m.group(2).strip()
+                                    
+                                st.session_state.faq_register_target = {
+                                    "idx": idx,
+                                    "question": clean_q,
+                                    "answer": message["content"],
+                                    "category": message.get("routed_category") or selected_category,
+                                    "recommendations": message.get("recommendations", [])
+                                }
+                                st.rerun()
 
                     msg_cat = message.get("routed_category") or selected_category
                     if message.get("feedback"):
