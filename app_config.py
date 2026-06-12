@@ -229,16 +229,16 @@ GLOBAL_CSS = """
         box-shadow: 0 6px 20px rgba(234, 88, 12, 0.35) !important;
     }
     .auto-routing-btn-container button[kind="secondary"] {
-        background-color: #ffffff !important;
+        background-color: #fff7ed !important;
         color: #ea580c !important;
         border: 1px solid #ffedd5 !important;
-        box-shadow: 0 1px 2px rgba(234, 88, 12, 0.02) !important;
+        box-shadow: 0 1px 2px rgba(234, 88, 12, 0.05) !important;
     }
     .auto-routing-btn-container button[kind="secondary"]:hover {
         border-color: #ff925c !important;
         color: #ff5200 !important;
-        background-color: #fff7ed !important;
-        box-shadow: 0 4px 12px rgba(255, 82, 0, 0.08) !important;
+        background-color: #ffedd5 !important;
+        box-shadow: 0 4px 12px rgba(255, 82, 0, 0.1) !important;
     }
 
     /* 지침서 다운로드 박스 프리미엄 스타일 */
@@ -392,13 +392,31 @@ GLOBAL_CSS = """
     /* stChatInput 스타일 커스텀 */
     [data-testid="stChatInput"] {
         border-radius: 16px !important;
-        border: 1px solid #e2e8f0 !important;
+        border: 2px solid #e2e8f0 !important;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
         background-color: #ffffff !important;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
     }
     [data-testid="stChatInput"] textarea {
         font-size: 0.95rem !important;
         color: #0f172a !important;
+    }
+
+    /* 포커스 및 모드별 보더 컬러 동적 스타일링 */
+    [data-testid="stChatInput"].mode-orange,
+    [data-testid="stChatInput"].mode-orange:focus-within {
+        border-color: #ea580c !important;
+        box-shadow: 0 4px 20px rgba(234, 88, 12, 0.06), 0 0 0 2px rgba(234, 88, 12, 0.15) !important;
+    }
+    [data-testid="stChatInput"].mode-green,
+    [data-testid="stChatInput"].mode-green:focus-within {
+        border-color: #16a34a !important;
+        box-shadow: 0 4px 20px rgba(22, 163, 74, 0.06), 0 0 0 2px rgba(22, 163, 74, 0.15) !important;
+    }
+    [data-testid="stChatInput"].mode-blue,
+    [data-testid="stChatInput"].mode-blue:focus-within {
+        border-color: #1e60ff !important;
+        box-shadow: 0 4px 20px rgba(30, 96, 255, 0.06), 0 0 0 2px rgba(30, 96, 255, 0.15) !important;
     }
 
     /* Autocomplete Dropdown styling */
@@ -505,6 +523,29 @@ GLOBAL_CSS = """
                 activeIndex = -1;
             }
 
+            function updateBorderColor() {
+                const val = textarea.value.trim();
+                
+                // 슬래시 명령어 입력 모드 검사:
+                // 1) 시작이 '/' 이고 첫 단어가 단축키 목록 중 하나와 일치하거나,
+                // 2) 아직 공백을 포함하지 않고 '/'로 시작하는 텍스트가 있을 때
+                const firstWord = val.split(' ')[0];
+                const isSlashCmd = firstWord.startsWith('/') && firstWord.length > 1;
+                const isSlashActive = val.startsWith('/') && !val.includes(' ') && val.length > 0;
+                
+                const currentSelectedCat = window.parent.current_selected_category || '⭐ 자동 분류';
+                
+                chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
+                
+                if (isSlashActive || isSlashCmd) {
+                    chatInputContainer.classList.add('mode-green');
+                } else if (currentSelectedCat === '⭐ 자동 분류') {
+                    chatInputContainer.classList.add('mode-orange');
+                } else {
+                    chatInputContainer.classList.add('mode-blue');
+                }
+            }
+
             function renderDropdown(list) {
                 filteredList = list;
                 dropdown.innerHTML = '';
@@ -523,7 +564,6 @@ GLOBAL_CSS = """
                     `;
                     
                     itemEl.addEventListener('mousedown', (e) => {
-                        // mousedown을 사용하고 preventDefault를 하여 textarea의 blur 이벤트를 막아 오동작 방지
                         e.preventDefault();
                         e.stopPropagation();
                         selectItem(item);
@@ -547,12 +587,15 @@ GLOBAL_CSS = """
                 textarea.dispatchEvent(new Event('input', { bubbles: true }));
                 textarea.focus();
                 hideDropdown();
+                updateBorderColor();
             }
 
             textarea.addEventListener('input', (e) => {
                 const val = textarea.value;
                 const lastSlashIdx = val.lastIndexOf('/');
                 
+                updateBorderColor();
+
                 if (lastSlashIdx === -1) {
                     hideDropdown();
                     return;
@@ -611,6 +654,12 @@ GLOBAL_CSS = """
                 }
             });
 
+            textarea.addEventListener('focus', updateBorderColor);
+            textarea.addEventListener('blur', () => {
+                setTimeout(hideDropdown, 200);
+                updateBorderColor();
+            });
+
             function updateActiveItem() {
                 const items = dropdown.querySelectorAll('.autocomplete-item');
                 items.forEach((item, index) => {
@@ -623,9 +672,8 @@ GLOBAL_CSS = """
                 });
             }
 
-            textarea.addEventListener('blur', () => {
-                setTimeout(hideDropdown, 200);
-            });
+            // 초기 보더 테두리 상태 적용
+            updateBorderColor();
         }, 500);
     })();
     </script>
