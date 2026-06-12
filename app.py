@@ -1113,7 +1113,7 @@ def render_qa_content():
                     query_text=search_prompt,
                     client=client,
                     model_name=LOCAL_MODEL_NAME,
-                    threshold=0.85,
+                    threshold=0.80,
                     manuals_root=manuals_root
                 )
                 

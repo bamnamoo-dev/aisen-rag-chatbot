@@ -60,7 +60,7 @@ def get_single_embedding(text, client, model_name="gemini-embedding-2"):
         print(f"❌ 단일 텍스트 임베딩 생성 오류: {e}")
     return None
 
-def search_faq(query_text, client, model_name="gemini-embedding-2", threshold=0.85, manuals_root="manuals"):
+def search_faq(query_text, client, model_name="gemini-embedding-2", threshold=0.80, manuals_root="manuals"):
     """
     입력된 질문과 로컬 FAQ DB 내의 질문들 간 코사인 유사도를 계산하여 
     임계값(threshold) 이상인 가장 유사한 FAQ 항목을 리턴합니다.

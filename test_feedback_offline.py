@@ -3,13 +3,15 @@ from core.feedback import FeedbackManager
 
 def test_feedback_system():
     print("=== 피드백 시스템 오프라인 테스트 ===")
+    # 0. 테스트용 임시 CSV 파일명 설정 (운영 feedback.csv 보호)
+    FeedbackManager.CSV_FILE_NAME = "feedback_test.csv"
     manuals_root = "manuals"
     csv_path = FeedbackManager.get_csv_path(manuals_root)
     
     # 1. 기존 테스트 피드백 파일 제거 (깨끗한 테스트 환경 조성)
     if os.path.exists(csv_path):
         os.remove(csv_path)
-        print("이전 테스트 feedback.csv 파일 제거 완료.")
+        print("이전 테스트 feedback_test.csv 파일 제거 완료.")
 
     # 2. 피드백 저장 테스트 1 (좋아요)
     print("\n1. 좋아요 피드백 저장 테스트...")
@@ -53,6 +55,11 @@ def test_feedback_system():
         if fb['Comment']:
             print(f"상세 사유: {fb['Comment']}")
         print(f"참조 지침서: {fb['ReferencedFiles']}")
+
+    # 6. 테스트 캐시 파일 정리
+    if os.path.exists(csv_path):
+        os.remove(csv_path)
+        print("\n5. 테스트 완료 후 임시 feedback_test.csv 파일 정리 완료.")
 
 if __name__ == "__main__":
     test_feedback_system()
