@@ -591,7 +591,11 @@ GLOBAL_CSS = """
             });
         }
 
-        const monitorInterval = setInterval(() => {
+        if (window.autocompleteInterval) {
+            clearInterval(window.autocompleteInterval);
+        }
+
+        window.autocompleteInterval = setInterval(() => {
             const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
             if (!textarea) return;
 
@@ -606,8 +610,8 @@ GLOBAL_CSS = """
                 chatInputContainer.appendChild(dropdown);
             }
 
-            if (textarea !== lastTextarea) {
-                lastTextarea = textarea;
+            if (!textarea.dataset.autocompleteBound) {
+                textarea.dataset.autocompleteBound = 'true';
 
                 textarea.addEventListener('input', () => {
                     const val = textarea.value;
