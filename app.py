@@ -105,7 +105,7 @@ st.set_page_config(page_title="AI-SENSE SMART RAG", page_icon="🏛️", layout=
 
 # 사이드바 헤더 및 CSS
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
-st.markdown(f"<script>window.parent.current_selected_category = '{selected_category}';</script>", unsafe_allow_html=True)
+st.markdown(f"<script>window.parent.current_selected_category = '{st.session_state.selected_category}';</script>", unsafe_allow_html=True)
 st.sidebar.markdown("""
     <div style="display: flex; align-items: center; gap: 10px; padding: 4px 0; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
         <div style="background-color: #1e60ff; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.25rem; box-shadow: 0 4px 10px rgba(30, 96, 255, 0.25);">I</div>
