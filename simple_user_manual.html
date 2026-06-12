@@ -512,28 +512,38 @@
             </div>
         </section>
 
-        <!-- Section 4: Slash Command -->
+        <!-- Section 4: Slash Autocomplete -->
         <section>
-            <h2>🎨 슬래시 명령어(/) 기반 카테고리 강제 지정</h2>
+            <h2>🎨 슬래시 명령어(/) 및 초성 자동완성 활용</h2>
             <p style="font-size: 0.95rem; color: var(--text-sub); margin-bottom: 20px;">
-                질문 입력창에서 특정 카테고리를 직접 지정하여 관련 지침서 및 법령을 정확하게 타겟팅할 수 있습니다.
+                질문 입력창에서 카테고리를 직접 지정하여 검색할 수 있는 퀵 명령어와 초성 검색 기능이 탑재되어 있습니다.
             </p>
             
             <div class="step-list">
                 <div class="step-card">
                     <div class="step-num">/</div>
                     <div class="step-body">
-                        <h3>슬래시 명령어 테두리 반응</h3>
-                        <p>입력창 첫 글자로 슬래시(<code>/</code>)를 입력하는 즉시 테두리가 <strong>초록색</strong>으로 변경되며 명령어 지정 모드로 자동 전환됩니다.</p>
+                        <h3>자동완성 드롭다운 호출</h3>
+                        <p>질문 입력창에 슬래시(<code>/</code>)를 입력하면 즉시 전체 카테고리 제안 팝업이 나타납니다.</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">ㄱ</div>
+                    <div class="step-body">
+                        <h3>한글 초성 검색 및 매칭</h3>
+                        <p><code>/ㄱ</code>을 타이핑하면 <strong>계약, 감사, 급원, 공무원</strong> 등 일치하는 초성 카테고리만 동적으로 필터링됩니다.</p>
+                        <ul>
+                            <li>키보드 <strong>방향키</strong>로 제안 목록을 이동하고 <strong>엔터(Enter)</strong> 또는 <strong>마우스 클릭</strong>으로 카테고리를 자동 기입합니다.</li>
+                        </ul>
                     </div>
                 </div>
                 <div class="step-card">
                     <div class="step-num">🎯</div>
                     <div class="step-body">
-                        <h3>강제 라우팅 및 정밀 검색</h3>
-                        <p><code>/지출 수의계약 한도</code>와 같이 입력하여 질문을 보내면 AI가 해당 분야의 지침서만을 강제 연계하여 질문을 정밀하게 분석합니다.</p>
+                        <h3>강제 라우팅 및 신속 검색</h3>
+                        <p><code>/지출 수의계약 한도</code>와 같이 입력하여 질문하면 AI가 질문의 카테고리를 강제로 <strong>'지출'</strong> 분야로 타겟팅하여 정밀 탐색합니다.</p>
                         <ul>
-                            <li>지정된 질문에 대해서는 답변 하단에 초록색 <strong>'📍 슬래시 지정 결과'</strong> 배지가 표시됩니다.</li>
+                            <li>슬래시가 지정된 질문은 녹색의 <strong>'📍 슬래시 지정 결과'</strong> 배지와 함께 안전하고 신속하게 처리됩니다.</li>
                         </ul>
                     </div>
                 </div>
