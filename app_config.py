@@ -147,7 +147,7 @@ GLOBAL_CSS = """
         gap: 8px !important; /* 위아래 간격 미세 조정 */
     }
     /* 사이드바 내부 2열 격자의 가로 간격 축소 */
-    div[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         gap: 4px !important; /* 기본 16px에서 4px로 축소하여 가로 간격 좁힘 */
     }
     /* 글로벌 프라이머리 버튼 (본문 영역 포함 - 대화용 등) */
@@ -164,7 +164,7 @@ GLOBAL_CSS = """
         box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
     /* 사이드바 개별 버튼 및 카테고리 카드 디자인 (설명서 카드 테마 매칭) */
-    div[data-testid="stSidebar"] .stButton > button {
+    [data-testid="stSidebar"] .stButton > button {
         width: 100% !important;
         text-align: left !important;
         display: flex !important;
@@ -182,7 +182,7 @@ GLOBAL_CSS = """
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
     }
     /* 사이드바 버튼 마우스 호버 효과 */
-    div[data-testid="stSidebar"] .stButton > button:hover {
+    [data-testid="stSidebar"] .stButton > button:hover {
         border-color: #1e60ff !important;
         color: #1e60ff !important;
         background-color: #eff6ff !important;
@@ -190,14 +190,14 @@ GLOBAL_CSS = """
         box-shadow: 0 4px 12px rgba(30, 96, 255, 0.08) !important;
     }
     /* 사이드바 내 활성화된 버튼 (kind = primary) 스타일 */
-    div[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+    [data-testid="stSidebar"] .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
         color: #ffffff !important;
         border: 1px solid #1e60ff !important;
         font-weight: 700 !important;
         box-shadow: 0 4px 14px rgba(30, 96, 255, 0.2) !important;
     }
-    div[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
         background: linear-gradient(135deg, #1d4ed8 0%, #0a3680 100%) !important;
         color: #ffffff !important;
         border-color: #1d4ed8 !important;
@@ -478,7 +478,10 @@ GLOBAL_CSS = """
         let filteredList = [];
         let lastTextarea = null;
         function getSelectedCategoryFromDOM() {
-            const primaryButtons = document.querySelectorAll('div[data-testid="stSidebar"] button[kind="primary"]');
+            let primaryButtons = document.querySelectorAll('[data-testid="stSidebar"] button[kind="primary"]');
+            if (primaryButtons.length === 0) {
+                primaryButtons = document.querySelectorAll('button[kind="primary"]');
+            }
             for (const btn of primaryButtons) {
                 const text = (btn.innerText || btn.textContent || '').trim();
                 for (const cat of categories) {
