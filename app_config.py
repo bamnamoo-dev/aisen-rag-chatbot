@@ -442,10 +442,10 @@ GLOBAL_CSS = """
         }
 
         const monitorInterval = setInterval(() => {
-            const textarea = document.querySelector('textarea[data-testid=\'stChatInputTextArea\']');
+            const textarea = document.querySelector('textarea[data-testid=stChatInputTextArea]');
             if (!textarea) return;
 
-            const chatInputContainer = textarea.closest('[data-testid=\'stChatInput\']');
+            const chatInputContainer = textarea.closest('[data-testid=stChatInput]');
             if (!chatInputContainer) return;
 
             if (textarea !== lastTextarea) {
