@@ -438,6 +438,7 @@ GLOBAL_CSS = """
     </style>
     <svg style="display:none;">
     <script>
+    //<![CDATA[
     (function() {
         const categories = [
             { name: '감사', emoji: '📁', shortcut: '/감사' },
@@ -628,6 +629,7 @@ GLOBAL_CSS = """
             }
         }, 300);
     })();
+    //]]>
     </script>
     </svg>
 """
