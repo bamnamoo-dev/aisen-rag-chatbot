@@ -498,7 +498,7 @@ GLOBAL_CSS = """
         let filteredList = [];
 
         const initInterval = setInterval(() => {
-            const textarea = window.parent.document.querySelector('textarea[data-testid="stChatInputTextArea"]');
+            const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
             if (!textarea) return;
             
             clearInterval(initInterval);
@@ -508,7 +508,7 @@ GLOBAL_CSS = """
 
             let dropdown = chatInputContainer.querySelector('#autocomplete-dropdown');
             if (!dropdown) {
-                dropdown = window.parent.document.createElement('div');
+                dropdown = document.createElement('div');
                 dropdown.id = 'autocomplete-dropdown';
                 chatInputContainer.style.position = 'relative';
                 chatInputContainer.appendChild(dropdown);
@@ -533,7 +533,7 @@ GLOBAL_CSS = """
                 const isSlashCmd = firstWord.startsWith('/') && firstWord.length > 1;
                 const isSlashActive = val.startsWith('/') && !val.includes(' ') && val.length > 0;
                 
-                const currentSelectedCat = window.parent.current_selected_category || '⭐ 자동 분류';
+                const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
                 
                 chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
                 
@@ -556,7 +556,7 @@ GLOBAL_CSS = """
                 }
 
                 list.forEach((item, index) => {
-                    const itemEl = window.parent.document.createElement('div');
+                    const itemEl = document.createElement('div');
                     itemEl.className = 'autocomplete-item' + (index === activeIndex ? ' active' : '');
                     itemEl.innerHTML = `
                         <span>${item.emoji} ${item.name}</span>
