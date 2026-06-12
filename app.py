@@ -1107,15 +1107,24 @@ def render_qa_content():
             with st.status("🔍 질문을 분석하고 관련 지침을 검색하고 있습니다...", expanded=True) as status:
                 # ----------------------------------------------------
                 # FAQ 시맨틱 캐시 우선 탐색 (API 호출 및 RAG 탐색 전 스캔)
+                # FAQ는 오직 '지침서' 탭의 '⭐ 자동 분류 (전체 질문)' 모드이고, 슬래시 카테고리 지정이 없을 때만 적용
                 # ----------------------------------------------------
-                status.write("🛰️ 로컬 FAQ 캐시에서 즉시 답변이 가능한지 검색 중...")
-                matched_faq, sim_score = search_faq(
-                    query_text=search_prompt,
-                    client=client,
-                    model_name=LOCAL_MODEL_NAME,
-                    threshold=0.80,
-                    manuals_root=manuals_root
-                )
+                apply_faq = (st.session_state.current_tab == "지침서") and (selected_category == "⭐ 자동 분류") and (slash_category is None)
+                
+                matched_faq = None
+                sim_score = 0.0
+                
+                if apply_faq:
+                    status.write("🛰️ 로컬 FAQ 캐시에서 즉시 답변이 가능한지 검색 중...")
+                    matched_faq, sim_score = search_faq(
+                        query_text=search_prompt,
+                        client=client,
+                        model_name=LOCAL_MODEL_NAME,
+                        threshold=0.80,
+                        manuals_root=manuals_root
+                    )
+                else:
+                    status.write("⏭️ 카테고리 지정 검색으로 판단되어 FAQ 매칭을 건너뜁니다.")
                 
                 if matched_faq:
                     status.update(label="⚡ FAQ 캐시 매치 완료! 즉시 답변합니다.", state="complete", expanded=False)

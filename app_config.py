@@ -89,6 +89,7 @@ def get_category_emoji(cat_name):
     elif "시설" in cat_lower or "재산" in cat_lower or "환경" in cat_lower: return "🏢"
     elif "인사" in cat_lower or "여무" in cat_lower or "복무" in cat_lower: return "👤"
     elif "자료" in cat_lower or "행정" in cat_lower: return "🏛️"
+    elif "사례" in cat_lower or "사례집" in cat_lower: return "📖"
     return "📁"
 
 # 4. Streamlit 글로벌 CSS 스타일
@@ -461,6 +462,7 @@ GLOBAL_CSS = """
             { name: '계약', emoji: '💼', shortcut: '/계약' },
             { name: '공무원', emoji: '👤', shortcut: '/공무원' },
             { name: '공무직', emoji: '👤', shortcut: '/공무직' },
+            { name: '교행지원사례집', emoji: '📖', shortcut: '/교행지원사례집' },
             { name: '기록물', emoji: '📁', shortcut: '/기록물' },
             { name: '늘봄학교', emoji: '🏫', shortcut: '/늘봄학교' },
             { name: '민원', emoji: '💬', shortcut: '/민원' },
