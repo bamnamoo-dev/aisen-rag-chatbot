@@ -97,7 +97,6 @@ GLOBAL_CSS = """
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * { font-family: 'Pretendard', sans-serif; }
     .main-title { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
-    
     /* 헤더 캡슐 알약 필 (aisen.store 스타일) */
     .header-pill {
         background-color: #eff6ff !important;
@@ -111,7 +110,6 @@ GLOBAL_CSS = """
         margin-bottom: 0.75rem !important;
         text-transform: uppercase !important;
     }
-    
     /* 사이드바 컨테이너 스타일 (완전 화이트 & 연한 회색 보더 & 상단 여백 축소) */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
@@ -121,7 +119,6 @@ GLOBAL_CSS = """
         padding-top: 0.5rem !important; /* 상단 공백 최소화 */
         padding-bottom: 0.5rem !important;
     }
-    
     /* 사이드바 내부의 모든 버튼 및 내부 자식 요소 강제 좌측 정렬 */
     [data-testid="stSidebar"] button {
         display: flex !important;
@@ -129,7 +126,6 @@ GLOBAL_CSS = """
         justify-content: flex-start !important;
         text-align: left !important;
     }
-    
     /* 사이드바 텍스트 줄바꿈 방지(nowrap) 및 말줄임표(ellipsis) 강제 적용 */
     [data-testid="stSidebar"] button p,
     [data-testid="stSidebar"] button span,
@@ -142,7 +138,6 @@ GLOBAL_CSS = """
         overflow: hidden !important;
         margin: 0 !important;
     }
-    
     /* 사이드바 내부 엘리먼트 간의 Streamlit 기본 외부 간격 조정 */
     [data-testid="stSidebar"] [data-testid="element-container"] {
         margin-bottom: 8px !important; /* 세로 간격 미세 조정 */
@@ -151,12 +146,10 @@ GLOBAL_CSS = """
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
         gap: 8px !important; /* 위아래 간격 미세 조정 */
     }
-
     /* 사이드바 내부 2열 격자의 가로 간격 축소 */
     div[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
         gap: 4px !important; /* 기본 16px에서 4px로 축소하여 가로 간격 좁힘 */
     }
-
     /* 글로벌 프라이머리 버튼 (본문 영역 포함 - 대화용 등) */
     .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
@@ -170,7 +163,6 @@ GLOBAL_CSS = """
         border-color: #1d4ed8 !important;
         box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
-
     /* 사이드바 개별 버튼 및 카테고리 카드 디자인 (설명서 카드 테마 매칭) */
     div[data-testid="stSidebar"] .stButton > button {
         width: 100% !important;
@@ -189,7 +181,6 @@ GLOBAL_CSS = """
         color: #475569 !important;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
     }
-
     /* 사이드바 버튼 마우스 호버 효과 */
     div[data-testid="stSidebar"] .stButton > button:hover {
         border-color: #1e60ff !important;
@@ -198,7 +189,6 @@ GLOBAL_CSS = """
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 12px rgba(30, 96, 255, 0.08) !important;
     }
-
     /* 사이드바 내 활성화된 버튼 (kind = primary) 스타일 */
     div[data-testid="stSidebar"] .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
@@ -207,14 +197,12 @@ GLOBAL_CSS = """
         font-weight: 700 !important;
         box-shadow: 0 4px 14px rgba(30, 96, 255, 0.2) !important;
     }
-
     div[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
         background: linear-gradient(135deg, #1d4ed8 0%, #0a3680 100%) !important;
         color: #ffffff !important;
         border-color: #1d4ed8 !important;
         box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
-
     /* ⭐ 자동 분류 버튼 오렌지색 전용 스타일 */
     .auto-routing-btn-container button[kind="primary"] {
         background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
@@ -240,7 +228,6 @@ GLOBAL_CSS = """
         background-color: #ffedd5 !important;
         box-shadow: 0 4px 12px rgba(255, 82, 0, 0.1) !important;
     }
-
     /* 지침서 다운로드 박스 프리미엄 스타일 */
     .file-container {
         background-color: #f0fdf4 !important;
@@ -252,7 +239,6 @@ GLOBAL_CSS = """
         border-left: 4px solid #16a34a !important;
         box-shadow: 0 2px 8px rgba(22, 163, 74, 0.04) !important;
     }
-    
     .file-container .stDownloadButton > button {
         width: 100% !important;
         text-align: left !important;
@@ -268,7 +254,6 @@ GLOBAL_CSS = """
         font-weight: 600 !important;
         transition: all 0.2s ease !important;
     }
-    
     /* 다운로드 버튼 내부 텍스트 완전 좌측 정렬 강제 및 넘치는 파일명 자동 말줄임(Ellipsis) 적용 */
     .file-container .stDownloadButton > button div[data-testid="stMarkdownContainer"],
     .file-container .stDownloadButton > button p,
@@ -282,7 +267,6 @@ GLOBAL_CSS = """
         vertical-align: middle !important;
         margin: 0 !important;
     }
-    
     .file-container .stDownloadButton > button:hover {
         background-color: #f0fdf4 !important;
         border-color: #bbf7d0 !important;
@@ -290,7 +274,6 @@ GLOBAL_CSS = """
         transform: translateY(-1px) !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
     }
-
     /* 설명서 다운로드 박스 프리미엄 스타일 */
     .manual-container {
         background-color: #eff6ff !important;
@@ -302,7 +285,6 @@ GLOBAL_CSS = """
         border-left: 4px solid #1e60ff !important;
         box-shadow: 0 2px 8px rgba(30, 96, 255, 0.04) !important;
     }
-    
     /* 설명서 내부 보기 버튼 스타일 개별 오버라이드 */
     .manual-container .stButton > button {
         width: 100% !important;
@@ -319,7 +301,6 @@ GLOBAL_CSS = """
         font-weight: 600 !important;
         transition: all 0.2s ease !important;
     }
-    
     .manual-container .stButton > button div[data-testid="stMarkdownContainer"],
     .manual-container .stButton > button p,
     .manual-container .stButton > button span {
@@ -332,7 +313,6 @@ GLOBAL_CSS = """
         vertical-align: middle !important;
         margin: 0 !important;
     }
-    
     .manual-container .stButton > button:hover {
         background-color: #eff6ff !important;
         border-color: #bfdbfe !important;
@@ -340,7 +320,6 @@ GLOBAL_CSS = """
         transform: translateY(-1px) !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
     }
-
     /* 보기 활성화 상태 스타일 */
     .manual-container .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
@@ -348,7 +327,6 @@ GLOBAL_CSS = """
         border-color: #1e60ff !important;
         box-shadow: 0 4px 10px rgba(30, 96, 255, 0.15) !important;
     }
-    
     /* 대화 카드형 스타일 및 Pretendard 최적화 */
     [data-testid="stChatMessage"] {
         background-color: #ffffff !important;
@@ -363,7 +341,6 @@ GLOBAL_CSS = """
         box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02) !important;
         border-color: rgba(30, 96, 255, 0.2) !important;
     }
-    
     /* 추천 질문 카드 스타일 - 아이센스토어 시그니처 코발트 블루 매칭 */
     .rec-btn-container .stButton > button {
         background-color: #ffffff !important;
@@ -380,7 +357,6 @@ GLOBAL_CSS = """
         text-align: center !important;
         display: block !important;
     }
-    
     .rec-btn-container .stButton > button:hover {
         background-color: #1e60ff !important;
         color: #ffffff !important;
@@ -388,7 +364,6 @@ GLOBAL_CSS = """
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 16px rgba(30, 96, 255, 0.2) !important;
     }
-    
     /* stChatInput 스타일 커스텀 */
     [data-testid="stChatInput"] {
         border-radius: 16px !important;
@@ -401,7 +376,6 @@ GLOBAL_CSS = """
         font-size: 0.95rem !important;
         color: #0f172a !important;
     }
-
     /* 포커스 및 모드별 보더 컬러 동적 스타일링 */
     [data-testid="stChatInput"].mode-orange,
     [data-testid="stChatInput"].mode-orange:focus-within {
@@ -418,7 +392,6 @@ GLOBAL_CSS = """
         border-color: #1e60ff !important;
         box-shadow: 0 4px 20px rgba(30, 96, 255, 0.06), 0 0 0 2px rgba(30, 96, 255, 0.15) !important;
     }
-
     /* Autocomplete Dropdown styling */
     #autocomplete-dropdown {
         position: absolute;
@@ -487,9 +460,7 @@ GLOBAL_CSS = """
             { name: '상위법령', emoji: '⚖️', shortcut: '/법령' },
             { name: '자치법규', emoji: '🏛️', shortcut: '/자치법규' }
         ];
-
         const CHOSUNG = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
-
         function getChosung(str) {
             let result = '';
             for (let i = 0; i < str.length; i++) {
@@ -502,22 +473,17 @@ GLOBAL_CSS = """
             }
             return result;
         }
-
         let activeIndex = -1;
         let filteredList = [];
         let lastTextarea = null;
-
         function updateBorderColor(textarea, chatInputContainer) {
             if (!textarea || !chatInputContainer) return;
             const val = textarea.value.trim();
             const firstWord = val.split(' ')[0];
             const isSlashCmd = firstWord.startsWith('/') && firstWord.length > 1;
             const isSlashActive = val.startsWith('/') && !val.includes(' ') && val.length > 0;
-            
             const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
-            
             chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
-            
             if (isSlashActive || isSlashCmd) {
                 chatInputContainer.classList.add('mode-green');
             } else if (currentSelectedCat === '⭐ 자동 분류') {
@@ -526,42 +492,34 @@ GLOBAL_CSS = """
                 chatInputContainer.classList.add('mode-blue');
             }
         }
-
         function renderDropdown(dropdown, textarea, chatInputContainer, list) {
             filteredList = list;
             dropdown.innerHTML = '';
-            
             if (list.length === 0) {
                 hideDropdown(dropdown);
                 return;
             }
-
             list.forEach((item, index) => {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'autocomplete-item' + (index === activeIndex ? ' active' : '');
                 itemEl.innerHTML = '<span>' + item.emoji + ' ' + item.name + '</span><span class="shortcut">' + item.shortcut + '</span>';
-                
                 itemEl.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     selectItem(dropdown, textarea, chatInputContainer, item);
                 });
-
                 dropdown.appendChild(itemEl);
             });
             showDropdown(dropdown);
         }
-
         function showDropdown(dropdown) {
             dropdown.style.display = 'block';
         }
-
         function hideDropdown(dropdown) {
             if (!dropdown) return;
             dropdown.style.display = 'none';
             activeIndex = -1;
         }
-
         function selectItem(dropdown, textarea, chatInputContainer, item) {
             const text = textarea.value;
             const lastSlashIdx = text.lastIndexOf('/');
@@ -571,13 +529,11 @@ GLOBAL_CSS = """
             } else {
                 textarea.value = item.shortcut + ' ';
             }
-
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
             textarea.focus();
             hideDropdown(dropdown);
             updateBorderColor(textarea, chatInputContainer);
         }
-
         function updateActiveItem(dropdown) {
             if (!dropdown) return;
             const items = dropdown.querySelectorAll('.autocomplete-item');
@@ -590,18 +546,14 @@ GLOBAL_CSS = """
                 }
             });
         }
-
         if (window.autocompleteInterval) {
             clearInterval(window.autocompleteInterval);
         }
-
         window.autocompleteInterval = setInterval(() => {
             const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
             if (!textarea) return;
-
             const chatInputContainer = textarea.closest('[data-testid="stChatInput"]');
             if (!chatInputContainer) return;
-
             let dropdown = chatInputContainer.querySelector('#autocomplete-dropdown');
             if (!dropdown) {
                 dropdown = document.createElement('div');
@@ -609,52 +561,41 @@ GLOBAL_CSS = """
                 chatInputContainer.style.position = 'relative';
                 chatInputContainer.appendChild(dropdown);
             }
-
             if (!textarea.dataset.autocompleteBound) {
                 textarea.dataset.autocompleteBound = 'true';
-
                 textarea.addEventListener('input', () => {
                     const val = textarea.value;
                     const lastSlashIdx = val.lastIndexOf('/');
-                    
                     updateBorderColor(textarea, chatInputContainer);
-
                     if (lastSlashIdx === -1) {
                         hideDropdown(dropdown);
                         return;
                     }
-
                     const searchPart = val.substring(lastSlashIdx + 1);
                     if (searchPart.includes(' ')) {
                         hideDropdown(dropdown);
                         return;
                     }
-
                     if (searchPart === '') {
                         activeIndex = 0;
                         renderDropdown(dropdown, textarea, chatInputContainer, categories);
                         return;
                     }
-
                     const query = searchPart.toLowerCase();
                     const queryChosung = getChosung(query);
-
                     const matched = categories.filter(cat => {
                         const nameLower = cat.name.toLowerCase();
                         const nameChosung = getChosung(nameLower);
                         const shortcutClean = cat.shortcut.replace('/', '').toLowerCase();
                         const shortcutChosung = getChosung(shortcutClean);
-
                         return nameLower.startsWith(query) || 
                                shortcutClean.startsWith(query) ||
                                nameChosung.startsWith(queryChosung) ||
                                shortcutChosung.startsWith(queryChosung);
                     });
-
                     activeIndex = matched.length > 0 ? 0 : -1;
                     renderDropdown(dropdown, textarea, chatInputContainer, matched);
                 });
-
                 textarea.addEventListener('keydown', (e) => {
                     if (dropdown.style.display === 'block') {
                         if (e.key === 'ArrowDown') {
@@ -676,13 +617,11 @@ GLOBAL_CSS = """
                         }
                     }
                 });
-
                 textarea.addEventListener('focus', () => updateBorderColor(textarea, chatInputContainer));
                 textarea.addEventListener('blur', () => {
                     setTimeout(() => hideDropdown(dropdown), 200);
                     updateBorderColor(textarea, chatInputContainer);
                 });
-                
                 updateBorderColor(textarea, chatInputContainer);
             } else {
                 updateBorderColor(textarea, chatInputContainer);
