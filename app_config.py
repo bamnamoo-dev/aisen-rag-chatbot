@@ -420,14 +420,13 @@ GLOBAL_CSS = """
     }
     </style>
 
-    <script>
+    <img src="x" onerror="
     (function() {
         let lastTextarea = null;
-
         function updateBorderColor(textarea, chatInputContainer) {
             if (!textarea || !chatInputContainer) return;
             const val = textarea.value.trim();
-            const isSlashStarted = val.startsWith('/'); // 단순 슬래시 입력 감지
+            const isSlashStarted = val.startsWith('/');
             
             const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
             
@@ -442,28 +441,25 @@ GLOBAL_CSS = """
             }
         }
 
-        // 300ms마다 실행하여 React DOM 교체 감지 및 리스너 재부착
-        setInterval(() => {
-            const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
+        const monitorInterval = setInterval(() => {
+            const textarea = document.querySelector('textarea[data-testid=\'stChatInputTextArea\']');
             if (!textarea) return;
 
-            const chatInputContainer = textarea.closest('[data-testid="stChatInput"]');
+            const chatInputContainer = textarea.closest('[data-testid=\'stChatInput\']');
             if (!chatInputContainer) return;
 
             if (textarea !== lastTextarea) {
                 lastTextarea = textarea;
 
-                // 새 이벤트 리스너 바인딩
                 textarea.addEventListener('input', () => updateBorderColor(textarea, chatInputContainer));
                 textarea.addEventListener('focus', () => updateBorderColor(textarea, chatInputContainer));
                 textarea.addEventListener('blur', () => updateBorderColor(textarea, chatInputContainer));
                 
                 updateBorderColor(textarea, chatInputContainer);
             } else {
-                // 노드가 같아도 테두리 스타일이 소실되는 것을 방지하기 위해 실시간 강제 동기화
                 updateBorderColor(textarea, chatInputContainer);
             }
         }, 300);
-    })();
-    </script>
+    })()
+    " style="display:none;"/>
 """
