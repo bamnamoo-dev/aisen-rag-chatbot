@@ -462,5 +462,229 @@ GLOBAL_CSS = """
         padding: 2px 6px;
         border-radius: 4px;
     }
-    </style><img src="x" onerror="eval(decodeURIComponent(escape(atob('KGZ1bmN0aW9uKCl7Y29uc3QgY2F0ZWdvcmllcz1be25hbWU6J+qwkOyCrCcsZW1vamk6J/Cfk4EnLHNob3J0Y3V0Oicv6rCQ7IKsJ30se25hbWU6J+qzhOyVvScsZW1vamk6J/CfkrwnLHNob3J0Y3V0Oicv6rOE7JW9J30se25hbWU6J+qzteustOybkCcsZW1vamk6J/CfkaQnLHNob3J0Y3V0Oicv6rO166y07JuQJ30se25hbWU6J+qzteustOyngScsZW1vamk6J/CfkaQnLHNob3J0Y3V0Oicv6rO166y07KeBJ30se25hbWU6J+q4sOuhneusvCcsZW1vamk6J/Cfk4EnLHNob3J0Y3V0Oicv6riw66Gd66y8J30se25hbWU6J+uKmOu0hO2Vmeq1kCcsZW1vamk6J/Cfj6snLHNob3J0Y3V0Oicv64qY67SE7ZWZ6rWQJ30se25hbWU6J+uvvOybkCcsZW1vamk6J/CfkqwnLHNob3J0Y3V0Oicv66+87JuQJ30se25hbWU6J+uwnOyghOq4sOq4iCcsZW1vamk6J/CfkrAnLHNob3J0Y3V0Oicv67Cc7KCE6riw6riIJ30se25hbWU6J+yEuOyehScsZW1vamk6J/CfkrwnLHNob3J0Y3V0Oicv7IS47J6FJ30se25hbWU6J+yLnOyEpOyggeumveq4iCcsZW1vamk6J/Cfj6InLHNob3J0Y3V0Oicv7Iuc7ISk7KCB66a96riIJ30se25hbWU6J+yYiOyCsCcsZW1vamk6J/CfkrwnLHNob3J0Y3V0Oicv7JiI7IKwJ30se25hbWU6J+yGLEuztOqzteqwnCcsZW1vamk6J/Cfk4EnLHNob3J0Y3V0Oicv7KCV67O06rO16rCcJ30se25hbWU6J+yerOyCsCcsZW1vamk6J/Cfj6InLHNob3J0Y3V0Oicv7J6s7IKwJ30se25hbWU6J+yngOy2nCcsZW1vamk6J/CfkrwnLHNob3J0Y3V0Oicv7KeA7LacJ30se25hbWU6J+2Vmeq1kOyatOyYgeychOybkO2ajCcsZW1vamk6J/Cfj6snLHNob3J0Y3V0Oicv7ZWZ6rWQ7Jq07JiB7JyE7JuQ7ZqMJ30se25hbWU6J+2YhOyepeyytO2XmO2VmeyKtScsZW1vamk6J/CfjpInLHNob3J0Y3V0Oicv7ZiE7J6l7LK07ZeY7ZWZ7Iq1J30se25hbWU6J+yCsOyXheyViOyghOuztOqxtCcsZW1vamk6J/CfjY8nLHNob3J0Y3V0Oicv7IKw7JeF7JWI7KCE67O06rG0J30se25hbWU6J+yDgeychOuyleuguScsZW1vamk6J/Kalu+4jycsc2hvcnRjdXQ6Jy/rspXroLknfSx7bmFtZTon7J6Q7LmY67KV6recJyxlbW9qaTon8J+Pm++4jycsc2hvcnRjdXQ6Jy/snpDsuZjrspXqt5wnfV07Y29uc3QgQ0hPU1VORz1bJ+OEsScsJ+OEsicsJ+OEtCcsJ+OEtycsJ+OEuCcsJ+OEuScsJ+OFgScsJ+OFgicsJ+OFgycsJ+OFhScsJ+OFhicsJ+OFhycsJ+OFiCcsJ+OFiScsJ+OFiicsJ+OFiycsJ+OFgCcsJ+OFjScsJ+OFjiddO2Z1bmN0aW9uIGdldENob3N1bmcoc3RyKXtsZXQgcmVzdWx0PScnO2ZvcihsZXQgaT0wO3N0ci5sZW5ndGg+aTtpKyspe2NvbnN0IGNvZGU9c3RyLmNoYXJDb2RlQXQoaSktNDQwMzI7bGV0IGlzSGFuZ3VsPWZhbHNlO2lmKGNvZGU+PTApe2lmKDExMTcyPj1jb2RlKXtyZXN1bHQrPUNIT1NVTkdbTWF0aC5mbG9vcihjb2RlLzU4OCldO2lzSGFuZ3VsPXRydWU7fX1pZighaXNIYW5ndWwpe3Jlc3VsdCs9c3RyLmNoYXJBdChpKTt9fXJldHVybiByZXN1bHQ7fWxldCBhY3RpdmVJbmRleD0tMTtsZXQgZmlsdGVyZWRMaXN0PVtdO2xldCBsYXN0VGV4dGFyZWE9bnVsbDtmdW5jdGlvbiB1cGRhdGVCb3JkZXJDb2xvcih0ZXh0YXJlYSxjaGF0SW5wdXRDb250YWluZXIpe2lmKCF0ZXh0YXJlYSlyZXR1cm47aWYoIWNoYXRJbnB1dENvbnRhaW5lcilyZXR1cm47Y29uc3QgdmFsPXRleHRhcmVhLnZhbHVlLnRyaW0oKTtjb25zdCBmaXJzdFdvcmQ9dmFsLnNwbGl0KCcgJylbMF07bGV0IGlzU2xhc2hDbWQ9ZmFsc2U7aWYoZmlyc3RXb3JkLnN0YXJ0c1dpdGgoJy8nKSl7aWYoZmlyc3RXb3JkLmxlbmd0aD4xKXtpc1NsYXNoQ21kPXRydWU7fX1sZXQgaXNTbGFzaEFjdGl2ZT1mYWxzZTtpZih2YWwuc3RhcnRzV2l0aCgnLycpKXtpZighdmFsLmluY2x1ZGVzKCcgJykpe2lmKHZhbC5sZW5ndGg+MCl7aXNTbGFzaEFjdGl2ZT10cnVlO319fWNvbnN0IGN1cnJlbnRTZWxlY3RlZENhdD13aW5kb3cuY3VycmVudF9zZWxlY3RlZF9jYXRlZ29yeXx8J+KtkCDsnpDrj5kg67aE66WYJztjaGF0SW5wdXRDb250YWluZXIuY2xhc3NMaXN0LnJlbW92ZSgnbW9kZS1vcmFuZ2UnLCdtb2RlLWdyZWVuJywnbW9kZS1ibHVlJyk7aWYoaXNTbGFzaEFjdGl2ZSl7Y2hhdElucHV0Q29udGFpbmVyLmNsYXNzTGlzdC5hZGQoJ21vZGUtZ3JlZW4nKTt9ZWxzZSBpZihpc1NsYXNoQ21kKXtjaGF0SW5wdXRDb250YWluZXIuY2xhc3NMaXN0LmFkZCgnbW9kZS1ncmVlbicpO31lbHNlIGlmKGN1cnJlbnRTZWxlY3RlZENhdD09PSfirZAg7J6Q64+ZIOu2hOulmCcpe2NoYXRJbnB1dENvbnRhaW5lci5jbGFzc0xpc3QuYWRkKCdtb2RlLW9yYW5nZScpO31lbHNle2NoYXRJbnB1dENvbnRhaW5lci5jbGFzc0xpc3QuYWRkKCdtb2RlLWJsdWUnKTt9fWZ1bmN0aW9uIHJlbmRlckRyb3Bkb3duKGRyb3Bkb3duLHRleHRhcmVhLGNoYXRJbnB1dENvbnRhaW5lcixsaXN0KXtmaWx0ZXJlZExpc3Q9bGlzdDtkcm9wZG93bi5pbm5lckhUTUw9Jyc7aWYoIWxpc3QubGVuZ3RoKXtoaWRlRHJvcGRvd24oZHJvcGRvd24pO3JldHVybjt9bGlzdC5mb3JFYWNoKChpdGVtLGluZGV4KT0+e2NvbnN0IGl0ZW1FbD1kb2N1bWVudC5jcmVhdGVFbGVtZW50KCdkaXYnKTtpdGVtRWwuY2xhc3NOYW1lPSdhdXRvY29tcGxldGUtaXRlbScrKGluZGV4PT09YWN0aXZlSW5kZXg/JyBhY3RpdmUnOicnKTtpdGVtRWwuaW5uZXJIVE1MPSc8c3Bhbj4nK2l0ZW0uZW1vamkrJyAnK2l0ZW0ubmFtZSsnPC9zcGFuPjxzcGFuIGNsYXNzPXNob3J0Y3V0PicraXRlbS5zaG9ydGN1dCsnPC9zcGFuPic7aXRlbUVsLmFkZEV2ZW50TGlzdGVuZXIoJ21vdXNlZG93bicsKGUpPT57ZS5wcmV2ZW50RGVmYXVsdCgpO2Uuc3RvcFByb3BhZ2F0aW9uKCk7c2VsZWN0SXRlbShkcm9wZG93bix0ZXh0YXJlYSxjaGF0SW5wdXRDb250YWluZXIsaXRlbSk7fSk7ZHJvcGRvd24uYXBwZW5kQ2hpbGQoaXRlbUVsKTt9KTtzaG93RHJvcGRvd24oZHJvcGRvd24pO31mdW5jdGlvbiBzaG93RHJvcGRvd24oZHJvcGRvd24pe2Ryb3Bkb3duLnN0eWxlLmRpc3BsYXk9J2Jsb2NrJzt9ZnVuY3Rpb24gaGlkZURyb3Bkb3duKGRyb3Bkb3duKXtpZighZHJvcGRvd24pcmV0dXJuO2Ryb3Bkb3duLnN0eWxlLmRpc3BsYXk9J25vbmUnO2FjdGl2ZUluZGV4PS0xO31mdW5jdGlvbiBzZWxlY3RJdGVtKGRyb3Bkb3duLHRleHRhcmVhLGNoYXRJbnB1dENvbnRhaW5lcixpdGVtKXtjb25zdCB0ZXh0PXRleHRhcmVhLnZhbHVlO2NvbnN0IGxhc3RTbGFzaElkeD10ZXh0Lmxhc3RJbmRleE9mKCcvJyk7aWYobGFzdFNsYXNoSWR4IT09LTEpe2NvbnN0IGJlZm9yZT10ZXh0LnN1YnN0cmluZygwLGxhc3RTbGFzaElkeCk7dGV4dGFyZWEudmFsdWU9YmVmb3JlK2l0ZW0uc2hvcnRjdXQrJyAnO31lbHNle3RleHRhcmVhLnZhbHVlPWl0ZW0uc2hvcnRjdXQrJyAnO310ZXh0YXJlYS5kaXNwYXRjaEV2ZW50KG5ldyBFdmVudCgnaW5wdXQnLHtidWJibGVzOnRydWV9KSk7dGV4dGFyZWEuZm9jdXMoKTtoaWRlRHJvcGRvd24oZHJvcGRvd24pO3VwZGF0ZUJvcmRlckNvbG9yKHRleHRhcmVhLGNoYXRJbnB1dENvbnRhaW5lcik7fWZ1bmN0aW9uIHVwZGF0ZUFjdGl2ZUl0ZW0oZHJvcGRvd24pe2lmKCFkcm9wZG93bilyZXR1cm47Y29uc3QgaXRlbXM9ZHJvcGRvd24ucXVlcnlTZWxlY3RvckFsbCgnLmF1dG9jb21wbGV0ZS1pdGVtJyk7aXRlbXMuZm9yRWFjaCgoaXRlbSxpbmRleCk9PntpZihpbmRleD09PWFjdGl2ZUluZGV4KXtpdGVtLmNsYXNzTGlzdC5hZGQoJ2FjdGl2ZScpO2l0ZW0uc2Nyb2xsSW50b1ZpZXcoe2Jsb2NrOiduZWFyZXN0J30pO31lbHNle2l0ZW0uY2xhc3NMaXN0LnJlbW92ZSgnYWN0aXZlJyk7fX0pO31jb25zdCBtb25pdG9ySW50ZXJ2YWw9c2V0SW50ZXJ2YWwoKCk9Pntjb25zdCB0ZXh0YXJlYT1kb2N1bWVudC5xdWVyeVNlbGVjdG9yKCd0ZXh0YXJlYVtkYXRhLXRlc3RpZD1zdENoYXRJbnB1dFRleHRBcmVhXScpO2lmKCF0ZXh0YXJlYSlyZXR1cm47Y29uc3QgY2hhdElucHV0Q29udGFpbmVyPXRleHRhcmVhLmNsb3Nlc3QoJ1tkYXRhLXRlc3RpZD1zdENoYXRJbnB1dF0nKTtpZighY2hhdElucHV0Q29udGFpbmVyKXJldHVybjtsZXQgZHJvcGRvd249Y2hhdElucHV0Q29udGFpbmVyLnF1ZXJ5U2VsZWN0b3IoJyNhdXRvY29tcGxldGUtZHJvcGRvd24nKTtpZighZHJvcGRvd24pe2Ryb3Bkb3duPWRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2RpdicpO2Ryb3Bkb3duLmlkPSdhdXRvY29tcGxldGUtZHJvcGRvd24nO2NoYXRJbnB1dENvbnRhaW5lci5zdHlsZS5wb3NpdGlvbj0ncmVsYXRpdmUnO2NoYXRJbnB1dENvbnRhaW5lci5hcHBlbmRDaGlsZChkcm9wZG93bik7fWlmKHRleHRhcmVhIT09bGFzdFRleHRhcmVhKXtsYXN0VGV4dGFyZWE9dGV4dGFyZWE7dGV4dGFyZWEuYWRkRXZlbnRMaXN0ZW5lcignaW5wdXQnLCgpPT57Y29uc3QgdmFsPXRleHRhcmVhLnZhbHVlO2NvbnN0IGxhc3RTbGFzaElkeD12YWwubGFzdEluZGV4T2YoJy8nKTt1cGRhdGVCb3JkZXJDb2xvcih0ZXh0YXJlYSxjaGF0SW5wdXRDb250YWluZXIpO2lmKGxhc3RTbGFzaElkeD09PS0xKXtoaWRlRHJvcGRvd24oZHJvcGRvd24pO3JldHVybjt9Y29uc3Qgc2VhcmNoUGFydD12YWwuc3Vic3RyaW5nKGxhc3RTbGFzaElkeCsxKTtpZihzZWFyY2hQYXJ0LmluY2x1ZGVzKCcgJykpe2hpZGVEcm9wZG93bihkcm9wZG93bik7cmV0dXJuO31pZihzZWFyY2hQYXJ0PT09Jycpe2FjdGl2ZUluZGV4PTA7cmVuZGVyRHJvcGRvd24oZHJvcGRvd24sdGV4dGFyZWEsY2hhdElucHV0Q29udGFpbmVyLGNhdGVnb3JpZXMpO3JldHVybjt9Y29uc3QgcXVlcnk9c2VhcmNoUGFydC50b0xvd2VyQ2FzZSgpO2NvbnN0IHF1ZXJ5Q2hvc3VuZz1nZXRDaG9zdW5nKHF1ZXJ5KTtjb25zdCBtYXRjaGVkPWNhdGVnb3JpZXMuZmlsdGVyKGNhdD0+e2NvbnN0IG5hbWVMb3dlcj1jYXQubmFtZS50b0xvd2VyQ2FzZSgpO2NvbnN0IG5hbWVDaG9zdW5nPWdldENob3N1bmcobmFtZUxvd2VyKTtjb25zdCBzaG9ydGN1dENsZWFuPWNhdC5zaG9ydGN1dC5yZXBsYWNlKCcvJywnJykudG9Mb3dlckNhc2UoKTtjb25zdCBzaG9ydGN1dENob3N1bmc9Z2V0Q2hvc3VuZyhzaG9ydGN1dENsZWFuKTtpZihuYW1lTG93ZXIuc3RhcnRzV2l0aChxdWVyeSkpcmV0dXJuIHRydWU7aWYoc2hvcnRjdXRDbGVhbi5zdGFydHNXaXRoKHF1ZXJ5KSlyZXR1cm4gdHJ1ZTtpZihuYW1lQ2hvc3VuZy5zdGFydHNXaXRoKHF1ZXJ5IGNob3N1bmcpKXJldHVybiB0cnVlO2lmKHNob3J0Y3V0Q2hvc3VuZy5zdGFydHNXaXRoKHF1ZXJ5Q2hvc3VuZykpcmV0dXJuIHRydWU7cmV0dXJuIGZhbHNlO30pO2FjdGl2ZUluZGV4PW1hdGNoZWQubGVuZ3RoPjA/MDotMTtyZW5kZXJEcm9wZG93bihkcm9wZG93bix0ZXh0YXJlYSxjaGF0SW5wdXRDb250YWluZXIsbWF0Y2hlZCk7fSk7dGV4dGFyZWEuYWRkRXZlbnRMaXN0ZW5lcigna2V5ZG93bicsKGUpPT57aWYoZHJvcGRvd24uc3R5bGUuZGlzcGxheT09PSdibG9jaycpe2lmKGUua2V5PT09J0Fycm93RG93bicpe2UucHJldmVudERlZmF1bHQoKTthY3RpdmVJbmRleD0oYWN0aXZlSW5kZXg%2BMSklZmlsdGVyZWRMaXN0Lmxlbmd0aDt1cGRhdGVBY3RpdmVJdGVtKGRyb3Bkb3duKTt9ZWxzZSBpZihlLmtleT09PSdBcnJvd1VwJyl7ZS5wcmV2ZW50RGVmYXVsdCgpO2FjdGl2ZUluZGV4PShhY3RpdmVJbmRleC0xK2ZpbHRlcmVkTGlzdC5sZW5ndGgpJWZpbHRlcmVkTGlzdC5sZW5ndGg7dXBkYXRlQWN0aXZlSXRlbShkcm9wZG93bik7fWVsc2UgaWYoZS5rZXk9PT0nRW50ZXInKXtpZihhY3RpdmVJbmRleD49MCl7aWYoZmlsdGVyZWRMaXN0Lmxlbmd0aD5hY3RpdmVJbmRleCl7ZS5wcmV2ZW50RGVmYXVsdCgpO2Uuc3RvcFByb3BhZ2F0aW9uKCk7c2VsZWN0SXRlbShkcm9wZG93bix0ZXh0YXJlYSxjaGF0SW5wdXRDb250YWluZXIsZmlsdGVyZWRMaXN0W2FjdGl2ZUluZGV4XSk7fX19ZWxzZSBpZihlLmtleT09PSdFc2NhcGUnKXtoaWRlRHJvcGRvd24oZHJvcGRvd24pO319fSk7dGV4dGFyZWEuYWRkRXZlbnRMaXN0ZW5lcignZm9jdXMnLCgpPT51cGRhdGVCb3JkZXJDb2xvcih0ZXh0YXJlYSxjaGF0SW5wdXRDb250YWluZXIpKTt0ZXh0YXJlYS5hZGRFdmVudExpc3RlbmVyKCdibHVyJywoKT0%2BIHNldFRpbWVvdXQoKCk9PmhpZGVEcm9wZG93bihkcm9wZG93biksMjAwKTt1cGRhdGVCb3JkZXJDb2xvcih0ZXh0YXJlYSxjaGF0SW5wdXRDb250YWluZXIpO30pO3VwZGF0ZUJvcmRlckNvbG9yKHRleHRhcmVhLGNoYXRJbnB1dENvbnRhaW5lcik7fWVsc2V7dXBkYXRlQm9yZGVyQ29sb3IodGV4dGFyZWEsY2hhdElucHV0Q29udGFpbmVyKTt9fSwzMDApO31lbHNle3VwZGF0ZUJvcmRlckNvbG9yKHRleHRhcmVhLGNoYXRJbnB1dENvbnRhaW5lcik7fX19LDMwMCk7fSkoKQ%3D%3D')))" style="display:none;"/>
+    </style>
+    <svg style="display:none;">
+    <script>
+    (function() {
+        const categories = [
+            { name: '감사', emoji: '📁', shortcut: '/감사' },
+            { name: '계약', emoji: '💼', shortcut: '/계약' },
+            { name: '공무원', emoji: '👤', shortcut: '/공무원' },
+            { name: '공무직', emoji: '👤', shortcut: '/공무직' },
+            { name: '기록물', emoji: '📁', shortcut: '/기록물' },
+            { name: '늘봄학교', emoji: '🏫', shortcut: '/늘봄학교' },
+            { name: '민원', emoji: '💬', shortcut: '/민원' },
+            { name: '발전기금', emoji: '💰', shortcut: '/발전기금' },
+            { name: '세입', emoji: '💼', shortcut: '/세입' },
+            { name: '시설적립금', emoji: '🏢', shortcut: '/시설적립금' },
+            { name: '예산', emoji: '💼', shortcut: '/예산' },
+            { name: '정보공개', emoji: '📁', shortcut: '/정보공개' },
+            { name: '재산', emoji: '🏢', shortcut: '/재산' },
+            { name: '지출', emoji: '💼', shortcut: '/지출' },
+            { name: '학교운영위원회', emoji: '🏫', shortcut: '/학교운영위원회' },
+            { name: '현장체험학습', emoji: '🎒', shortcut: '/현장체험학습' },
+            { name: '산업안전보건', emoji: '🍏', shortcut: '/산업안전보건' },
+            { name: '상위법령', emoji: '⚖️', shortcut: '/법령' },
+            { name: '자치법규', emoji: '🏛️', shortcut: '/자치법규' }
+        ];
+
+        const CHOSUNG = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+
+        function getChosung(str) {
+            let result = '';
+            for (let i = 0; i < str.length; i++) {
+                const code = str.charCodeAt(i) - 44032;
+                if (code >= 0 && code <= 11172) {
+                    result += CHOSUNG[Math.floor(code / 588)];
+                } else {
+                    result += str.charAt(i);
+                }
+            }
+            return result;
+        }
+
+        let activeIndex = -1;
+        let filteredList = [];
+        let lastTextarea = null;
+
+        function updateBorderColor(textarea, chatInputContainer) {
+            if (!textarea || !chatInputContainer) return;
+            const val = textarea.value.trim();
+            const firstWord = val.split(' ')[0];
+            const isSlashCmd = firstWord.startsWith('/') && firstWord.length > 1;
+            const isSlashActive = val.startsWith('/') && !val.includes(' ') && val.length > 0;
+            
+            const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
+            
+            chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
+            
+            if (isSlashActive || isSlashCmd) {
+                chatInputContainer.classList.add('mode-green');
+            } else if (currentSelectedCat === '⭐ 자동 분류') {
+                chatInputContainer.classList.add('mode-orange');
+            } else {
+                chatInputContainer.classList.add('mode-blue');
+            }
+        }
+
+        function renderDropdown(dropdown, textarea, chatInputContainer, list) {
+            filteredList = list;
+            dropdown.innerHTML = '';
+            
+            if (list.length === 0) {
+                hideDropdown(dropdown);
+                return;
+            }
+
+            list.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'autocomplete-item' + (index === activeIndex ? ' active' : '');
+                itemEl.innerHTML = '<span>' + item.emoji + ' ' + item.name + '</span><span class="shortcut">' + item.shortcut + '</span>';
+                
+                itemEl.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectItem(dropdown, textarea, chatInputContainer, item);
+                });
+
+                dropdown.appendChild(itemEl);
+            });
+            showDropdown(dropdown);
+        }
+
+        function showDropdown(dropdown) {
+            dropdown.style.display = 'block';
+        }
+
+        function hideDropdown(dropdown) {
+            if (!dropdown) return;
+            dropdown.style.display = 'none';
+            activeIndex = -1;
+        }
+
+        function selectItem(dropdown, textarea, chatInputContainer, item) {
+            const text = textarea.value;
+            const lastSlashIdx = text.lastIndexOf('/');
+            if (lastSlashIdx !== -1) {
+                const before = text.substring(0, lastSlashIdx);
+                textarea.value = before + item.shortcut + ' ';
+            } else {
+                textarea.value = item.shortcut + ' ';
+            }
+
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.focus();
+            hideDropdown(dropdown);
+            updateBorderColor(textarea, chatInputContainer);
+        }
+
+        function updateActiveItem(dropdown) {
+            if (!dropdown) return;
+            const items = dropdown.querySelectorAll('.autocomplete-item');
+            items.forEach((item, index) => {
+                if (index === activeIndex) {
+                    item.classList.add('active');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        const monitorInterval = setInterval(() => {
+            const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
+            if (!textarea) return;
+
+            const chatInputContainer = textarea.closest('[data-testid="stChatInput"]');
+            if (!chatInputContainer) return;
+
+            let dropdown = chatInputContainer.querySelector('#autocomplete-dropdown');
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.id = 'autocomplete-dropdown';
+                chatInputContainer.style.position = 'relative';
+                chatInputContainer.appendChild(dropdown);
+            }
+
+            if (textarea !== lastTextarea) {
+                lastTextarea = textarea;
+
+                textarea.addEventListener('input', () => {
+                    const val = textarea.value;
+                    const lastSlashIdx = val.lastIndexOf('/');
+                    
+                    updateBorderColor(textarea, chatInputContainer);
+
+                    if (lastSlashIdx === -1) {
+                        hideDropdown(dropdown);
+                        return;
+                    }
+
+                    const searchPart = val.substring(lastSlashIdx + 1);
+                    if (searchPart.includes(' ')) {
+                        hideDropdown(dropdown);
+                        return;
+                    }
+
+                    if (searchPart === '') {
+                        activeIndex = 0;
+                        renderDropdown(dropdown, textarea, chatInputContainer, categories);
+                        return;
+                    }
+
+                    const query = searchPart.toLowerCase();
+                    const queryChosung = getChosung(query);
+
+                    const matched = categories.filter(cat => {
+                        const nameLower = cat.name.toLowerCase();
+                        const nameChosung = getChosung(nameLower);
+                        const shortcutClean = cat.shortcut.replace('/', '').toLowerCase();
+                        const shortcutChosung = getChosung(shortcutClean);
+
+                        return nameLower.startsWith(query) || 
+                               shortcutClean.startsWith(query) ||
+                               nameChosung.startsWith(queryChosung) ||
+                               shortcutChosung.startsWith(queryChosung);
+                    });
+
+                    activeIndex = matched.length > 0 ? 0 : -1;
+                    renderDropdown(dropdown, textarea, chatInputContainer, matched);
+                });
+
+                textarea.addEventListener('keydown', (e) => {
+                    if (dropdown.style.display === 'block') {
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            activeIndex = (activeIndex + 1) % filteredList.length;
+                            updateActiveItem(dropdown);
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            activeIndex = (activeIndex - 1 + filteredList.length) % filteredList.length;
+                            updateActiveItem(dropdown);
+                        } else if (e.key === 'Enter') {
+                            if (activeIndex >= 0 && activeIndex < filteredList.length) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                selectItem(dropdown, textarea, chatInputContainer, filteredList[activeIndex]);
+                            }
+                        } else if (e.key === 'Escape') {
+                            hideDropdown(dropdown);
+                        }
+                    }
+                });
+
+                textarea.addEventListener('focus', () => updateBorderColor(textarea, chatInputContainer));
+                textarea.addEventListener('blur', () => {
+                    setTimeout(() => hideDropdown(dropdown), 200);
+                    updateBorderColor(textarea, chatInputContainer);
+                });
+                
+                updateBorderColor(textarea, chatInputContainer);
+            } else {
+                updateBorderColor(textarea, chatInputContainer);
+            }
+        }, 300);
+    })();
+    </script>
+    </svg>
 """
