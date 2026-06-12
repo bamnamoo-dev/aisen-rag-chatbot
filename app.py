@@ -363,7 +363,6 @@ st.sidebar.caption("💡 **안내 및 면책 조항**: 본 서비스는 교육�
 # 메인 영역 렌더링 분기
 # ----------------------------------------------------
 selected_category = st.session_state.selected_category
-st.markdown(f"<svg style='display:none;' id='cat-tracker-{time.time()}'><script>//<![CDATA[\nwindow.current_selected_category = '{selected_category}';\n//]]>\n</script></svg>", unsafe_allow_html=True)
 
 # 사용자가 관리자 로그인 상태인 경우, 상단 탭을 통해 대시보드와 Q&A를 구분
 admin_tab_qa, admin_tab_dashboard = None, None

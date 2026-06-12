@@ -477,13 +477,25 @@ GLOBAL_CSS = """
         let activeIndex = -1;
         let filteredList = [];
         let lastTextarea = null;
+        function getSelectedCategoryFromDOM() {
+            const primaryButtons = document.querySelectorAll('div[data-testid="stSidebar"] button[kind="primary"]');
+            for (const btn of primaryButtons) {
+                const text = (btn.innerText || btn.textContent || '').trim();
+                for (const cat of categories) {
+                    if (text.includes(cat.name)) {
+                        return cat.name;
+                    }
+                }
+            }
+            return '⭐ 자동 분류';
+        }
         function updateBorderColor(textarea, chatInputContainer) {
             if (!textarea || !chatInputContainer) return;
             const val = textarea.value.trim();
             const firstWord = val.split(' ')[0];
             const isSlashCmd = firstWord.startsWith('/') && firstWord.length > 1;
             const isSlashActive = val.startsWith('/') && !val.includes(' ') && val.length > 0;
-            const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
+            const currentSelectedCat = getSelectedCategoryFromDOM();
             chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
             if (isSlashActive || isSlashCmd) {
                 chatInputContainer.classList.add('mode-green');
