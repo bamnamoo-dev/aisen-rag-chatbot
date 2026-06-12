@@ -422,46 +422,48 @@ GLOBAL_CSS = """
 
     <script>
     (function() {
-        const initInterval = setInterval(() => {
+        let lastTextarea = null;
+
+        function updateBorderColor(textarea, chatInputContainer) {
+            if (!textarea || !chatInputContainer) return;
+            const val = textarea.value.trim();
+            const isSlashStarted = val.startsWith('/'); // 단순 슬래시 입력 감지
+            
+            const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
+            
+            chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
+            
+            if (isSlashStarted) {
+                chatInputContainer.classList.add('mode-green');
+            } else if (currentSelectedCat === '⭐ 자동 분류') {
+                chatInputContainer.classList.add('mode-orange');
+            } else {
+                chatInputContainer.classList.add('mode-blue');
+            }
+        }
+
+        // 300ms마다 실행하여 React DOM 교체 감지 및 리스너 재부착
+        setInterval(() => {
             const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
             if (!textarea) return;
-            
-            clearInterval(initInterval);
 
             const chatInputContainer = textarea.closest('[data-testid="stChatInput"]');
             if (!chatInputContainer) return;
 
-            function updateBorderColor() {
-                const val = textarea.value.trim();
+            if (textarea !== lastTextarea) {
+                lastTextarea = textarea;
+
+                // 새 이벤트 리스너 바인딩
+                textarea.addEventListener('input', () => updateBorderColor(textarea, chatInputContainer));
+                textarea.addEventListener('focus', () => updateBorderColor(textarea, chatInputContainer));
+                textarea.addEventListener('blur', () => updateBorderColor(textarea, chatInputContainer));
                 
-                // 슬래시 명령어 입력 모드 검사:
-                // 1) 시작이 '/' 이고 첫 단어가 단축키 목록 중 하나와 일치하거나,
-                // 2) 아직 공백을 포함하지 않고 '/'로 시작하는 텍스트가 있을 때
-                const firstWord = val.split(' ')[0];
-                const isSlashCmd = firstWord.startsWith('/') && firstWord.length > 1;
-                const isSlashActive = val.startsWith('/') && !val.includes(' ') && val.length > 0;
-                const isSlashStarted = val.startsWith('/'); // 단순 슬래시 입력 감지
-                
-                const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
-                
-                chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
-                
-                if (isSlashStarted || isSlashActive || isSlashCmd) {
-                    chatInputContainer.classList.add('mode-green');
-                } else if (currentSelectedCat === '⭐ 자동 분류') {
-                    chatInputContainer.classList.add('mode-orange');
-                } else {
-                    chatInputContainer.classList.add('mode-blue');
-                }
+                updateBorderColor(textarea, chatInputContainer);
+            } else {
+                // 노드가 같아도 테두리 스타일이 소실되는 것을 방지하기 위해 실시간 강제 동기화
+                updateBorderColor(textarea, chatInputContainer);
             }
-
-            textarea.addEventListener('input', updateBorderColor);
-            textarea.addEventListener('focus', updateBorderColor);
-            textarea.addEventListener('blur', updateBorderColor);
-
-            // 초기 보더 테두리 상태 적용
-            updateBorderColor();
-        }, 500);
+        }, 300);
     })();
     </script>
 """
