@@ -774,6 +774,25 @@ def render_faq_dashboard():
     else:
         st.info("ℹ️ 현재 등록된 FAQ 사전 답변이 없습니다. 질문-답변 과정에서 하단의 '📌 이 답변을 FAQ에 등록' 버튼을 사용하여 등록할 수 있습니다.")
 
+    # 3. 깃허브 웹서버 동기화 섹션 (로컬 환경일 때만 활성화)
+    st.markdown("---")
+    st.markdown("### 🚀 웹 서버에 동기화 (Git Push)")
+    
+    is_local_env = os.getenv("IS_LOCAL", "False").lower() in ("true", "1", "yes")
+    
+    if is_local_env:
+        st.info("💡 로컬 서버에서 수정한 FAQ 캐시 변경사항을 실시간 웹 서버(Streamlit Cloud)에 적용하려면 동기화 단추를 클릭해 주세요.")
+        if st.button("🚀 깃허브 원격 서버로 FAQ 동기화 시작", type="primary", use_container_width=True, key="faq_git_push_btn"):
+            with st.spinner("로컬 FAQ 캐시 변경사항을 깃허브에 푸시하는 중..."):
+                from core.faq_service import sync_faq_to_github
+                success, msg = sync_faq_to_github(manuals_root)
+                if success:
+                    st.success(f"🎉 동기화 성공: {msg} (약 1분 이내에 실시간 웹 챗봇에 자동 업데이트됩니다.)")
+                else:
+                    st.error(f"❌ 동기화 실패: {msg}")
+    else:
+        st.warning("⚠️ **동기화 불가**: 실시간 웹 클라우드 서버 환경에서는 직접 깃허브 동기화를 수행할 수 없습니다. FAQ의 장기 보존 및 추가는 로컬 개발 서버에서 작업 후 푸시해 주세요.")
+
 
 # 2. Q&A 뷰 렌더링 함수 정의
 def render_qa_content():

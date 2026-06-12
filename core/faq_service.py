@@ -185,4 +185,33 @@ def update_faq(old_question, new_question, new_answer, new_category, client, mod
     
     return save_faq_db(db, manuals_root)
 
+def sync_faq_to_github(manuals_root="manuals"):
+    """
+    로컬의 FAQ 데이터베이스 파일(faq_db.pkl)을 깃허브 원격 저장소에 자동으로 커밋&푸시하여
+    웹 서버와 실시간으로 동기화합니다.
+    """
+    import subprocess
+    faq_file = os.path.join(manuals_root, "faq_db.pkl")
+    
+    if not os.path.exists(faq_file):
+        return False, "FAQ 데이터베이스 파일이 존재하지 않습니다."
+        
+    try:
+        status_res = subprocess.run(["git", "status", "--porcelain", faq_file], capture_output=True, text=True, check=True)
+        if not status_res.stdout.strip():
+            return True, "변경 사항이 없어 동기화가 필요하지 않습니다. (이미 최신 상태)"
+            
+        subprocess.run(["git", "add", faq_file], capture_output=True, text=True, check=True)
+        subprocess.run(["git", "commit", "-m", "Admin: Update FAQ database via dashboard sync"], capture_output=True, text=True, check=True)
+        subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, check=True)
+        
+        return True, "성공적으로 깃허브 원격 서버와 동기화가 완료되었습니다!"
+        
+    except subprocess.CalledProcessError as e:
+        err_msg = e.stderr if e.stderr else str(e)
+        return False, f"Git 명령 실행 오류: {err_msg.strip()}"
+    except Exception as e:
+        return False, f"동기화 에러: {str(e)}"
+
+
 
