@@ -105,7 +105,6 @@ st.set_page_config(page_title="AI-SENSE SMART RAG", page_icon="🏛️", layout=
 
 # 사이드바 헤더 및 CSS
 st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
-st.markdown(f"<svg style='display:none;'><script>window.current_selected_category = '{st.session_state.selected_category}';</script></svg>", unsafe_allow_html=True)
 st.sidebar.markdown("""
     <div style="display: flex; align-items: center; gap: 10px; padding: 4px 0; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
         <div style="background-color: #1e60ff; color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.25rem; box-shadow: 0 4px 10px rgba(30, 96, 255, 0.25);">I</div>
@@ -364,6 +363,7 @@ st.sidebar.caption("💡 **안내 및 면책 조항**: 본 서비스는 교육�
 # 메인 영역 렌더링 분기
 # ----------------------------------------------------
 selected_category = st.session_state.selected_category
+st.markdown(f"<svg style='display:none;'><script>//<![CDATA[\nwindow.current_selected_category = '{selected_category}';\n//]]>\n</script></svg>", unsafe_allow_html=True)
 
 # 사용자가 관리자 로그인 상태인 경우, 상단 탭을 통해 대시보드와 Q&A를 구분
 admin_tab_qa, admin_tab_dashboard = None, None

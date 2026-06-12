@@ -367,7 +367,7 @@ GLOBAL_CSS = """
     /* stChatInput 스타일 커스텀 */
     [data-testid="stChatInput"] {
         border-radius: 16px !important;
-        border: 2px solid #e2e8f0 !important;
+        border: 3px solid #e2e8f0 !important;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
         background-color: #ffffff !important;
         transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
