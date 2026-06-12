@@ -418,85 +418,10 @@ GLOBAL_CSS = """
         border-color: #1e60ff !important;
         box-shadow: 0 4px 20px rgba(30, 96, 255, 0.06), 0 0 0 2px rgba(30, 96, 255, 0.15) !important;
     }
-
-    /* Autocomplete Dropdown styling */
-    #autocomplete-dropdown {
-        position: absolute;
-        bottom: calc(100% + 5px);
-        left: 10px;
-        width: 320px;
-        max-height: 250px;
-        overflow-y: auto;
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-        z-index: 999999;
-        display: none;
-        padding: 6px 0;
-    }
-    .autocomplete-item {
-        padding: 8px 16px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        color: #334155;
-        font-weight: 500;
-        transition: background-color 0.15s ease, color 0.15s ease;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        text-align: left !important;
-    }
-    .autocomplete-item.active {
-        background-color: #eff6ff;
-        color: #1e60ff;
-        font-weight: 700;
-    }
-    .autocomplete-item:hover {
-        background-color: #f8fafc;
-    }
-    .autocomplete-item .shortcut {
-        font-size: 0.75rem;
-        color: #94a3b8;
-        background-color: #f1f5f9;
-        padding: 2px 6px;
-        border-radius: 4px;
-    }
     </style>
 
     <script>
     (function() {
-        const categories = [
-            { name: "지출", emoji: "💼", shortcut: "/지출" },
-            { name: "예산", emoji: "💼", shortcut: "/예산" },
-            { name: "세입", emoji: "💼", shortcut: "/세입" },
-            { name: "계약", emoji: "💼", shortcut: "/계약" },
-            { name: "급여", emoji: "👤", shortcut: "/급여" },
-            { name: "복무", emoji: "👤", shortcut: "/복무" },
-            { name: "행정", emoji: "🏛️", shortcut: "/행정" },
-            { name: "감사", emoji: "📁", shortcut: "/감사" },
-            { name: "상위법령", emoji: "⚖️", shortcut: "/법령" },
-            { name: "자치법규", emoji: "🏛️", shortcut: "/자치법규" }
-        ];
-
-        const CHOSUNG = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
-
-        function getChosung(str) {
-            let result = "";
-            for (let i = 0; i < str.length; i++) {
-                const code = str.charCodeAt(i) - 44032;
-                if (code >= 0 && code <= 11172) {
-                    result += CHOSUNG[Math.floor(code / 588)];
-                } else {
-                    result += str.charAt(i);
-                }
-            }
-            return result;
-        }
-
-        let activeIndex = -1;
-        let filteredList = [];
-
         const initInterval = setInterval(() => {
             const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
             if (!textarea) return;
@@ -505,23 +430,6 @@ GLOBAL_CSS = """
 
             const chatInputContainer = textarea.closest('[data-testid="stChatInput"]');
             if (!chatInputContainer) return;
-
-            let dropdown = chatInputContainer.querySelector('#autocomplete-dropdown');
-            if (!dropdown) {
-                dropdown = document.createElement('div');
-                dropdown.id = 'autocomplete-dropdown';
-                chatInputContainer.style.position = 'relative';
-                chatInputContainer.appendChild(dropdown);
-            }
-
-            function showDropdown() {
-                dropdown.style.display = 'block';
-            }
-
-            function hideDropdown() {
-                dropdown.style.display = 'none';
-                activeIndex = -1;
-            }
 
             function updateBorderColor() {
                 const val = textarea.value.trim();
@@ -532,12 +440,13 @@ GLOBAL_CSS = """
                 const firstWord = val.split(' ')[0];
                 const isSlashCmd = firstWord.startsWith('/') && firstWord.length > 1;
                 const isSlashActive = val.startsWith('/') && !val.includes(' ') && val.length > 0;
+                const isSlashStarted = val.startsWith('/'); // 단순 슬래시 입력 감지
                 
                 const currentSelectedCat = window.current_selected_category || '⭐ 자동 분류';
                 
                 chatInputContainer.classList.remove('mode-orange', 'mode-green', 'mode-blue');
                 
-                if (isSlashActive || isSlashCmd) {
+                if (isSlashStarted || isSlashActive || isSlashCmd) {
                     chatInputContainer.classList.add('mode-green');
                 } else if (currentSelectedCat === '⭐ 자동 분류') {
                     chatInputContainer.classList.add('mode-orange');
@@ -546,131 +455,9 @@ GLOBAL_CSS = """
                 }
             }
 
-            function renderDropdown(list) {
-                filteredList = list;
-                dropdown.innerHTML = '';
-                
-                if (list.length === 0) {
-                    hideDropdown();
-                    return;
-                }
-
-                list.forEach((item, index) => {
-                    const itemEl = document.createElement('div');
-                    itemEl.className = 'autocomplete-item' + (index === activeIndex ? ' active' : '');
-                    itemEl.innerHTML = `
-                        <span>${item.emoji} ${item.name}</span>
-                        <span class="shortcut">${item.shortcut}</span>
-                    `;
-                    
-                    itemEl.addEventListener('mousedown', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        selectItem(item);
-                    });
-
-                    dropdown.appendChild(itemEl);
-                });
-                showDropdown();
-            }
-
-            function selectItem(item) {
-                const text = textarea.value;
-                const lastSlashIdx = text.lastIndexOf('/');
-                if (lastSlashIdx !== -1) {
-                    const before = text.substring(0, lastSlashIdx);
-                    textarea.value = before + item.shortcut + " ";
-                } else {
-                    textarea.value = item.shortcut + " ";
-                }
-
-                textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                textarea.focus();
-                hideDropdown();
-                updateBorderColor();
-            }
-
-            textarea.addEventListener('input', (e) => {
-                const val = textarea.value;
-                const lastSlashIdx = val.lastIndexOf('/');
-                
-                updateBorderColor();
-
-                if (lastSlashIdx === -1) {
-                    hideDropdown();
-                    return;
-                }
-
-                const searchPart = val.substring(lastSlashIdx + 1);
-                if (searchPart.includes(' ')) {
-                    hideDropdown();
-                    return;
-                }
-
-                if (searchPart === "") {
-                    activeIndex = 0;
-                    renderDropdown(categories);
-                    return;
-                }
-
-                const query = searchPart.toLowerCase();
-                const queryChosung = getChosung(query);
-
-                const matched = categories.filter(cat => {
-                    const nameLower = cat.name.toLowerCase();
-                    const nameChosung = getChosung(nameLower);
-                    const shortcutClean = cat.shortcut.replace('/', '').toLowerCase();
-                    const shortcutChosung = getChosung(shortcutClean);
-
-                    return nameLower.startsWith(query) || 
-                           shortcutClean.startsWith(query) ||
-                           nameChosung.startsWith(queryChosung) ||
-                           shortcutChosung.startsWith(queryChosung);
-                });
-
-                activeIndex = matched.length > 0 ? 0 : -1;
-                renderDropdown(matched);
-            });
-
-            textarea.addEventListener('keydown', (e) => {
-                if (dropdown.style.display === 'block') {
-                    if (e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        activeIndex = (activeIndex + 1) % filteredList.length;
-                        updateActiveItem();
-                    } else if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        activeIndex = (activeIndex - 1 + filteredList.length) % filteredList.length;
-                        updateActiveItem();
-                    } else if (e.key === 'Enter') {
-                        if (activeIndex >= 0 && activeIndex < filteredList.length) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            selectItem(filteredList[activeIndex]);
-                        }
-                    } else if (e.key === 'Escape') {
-                        hideDropdown();
-                    }
-                }
-            });
-
+            textarea.addEventListener('input', updateBorderColor);
             textarea.addEventListener('focus', updateBorderColor);
-            textarea.addEventListener('blur', () => {
-                setTimeout(hideDropdown, 200);
-                updateBorderColor();
-            });
-
-            function updateActiveItem() {
-                const items = dropdown.querySelectorAll('.autocomplete-item');
-                items.forEach((item, index) => {
-                    if (index === activeIndex) {
-                        item.classList.add('active');
-                        item.scrollIntoView({ block: 'nearest' });
-                    } else {
-                        item.classList.remove('active');
-                    }
-                });
-            }
+            textarea.addEventListener('blur', updateBorderColor);
 
             // 초기 보더 테두리 상태 적용
             updateBorderColor();
