@@ -635,6 +635,58 @@ def render_admin_dashboard():
             else:
                 st.info("ℹ️ 현재 수집된 사용자 피드백 데이터가 없습니다. 챗봇 질문 시 하단에 피드백이 등록되면 여기에 표시됩니다.")
 
+        # 1-D. FAQ 캐시 관리 섹션
+        st.markdown("---")
+        st.markdown("### 📄 5. FAQ (자주하는 질문) 캐시 관리")
+        
+        from core.faq_service import load_faq_db, delete_faq
+        faq_db_data = load_faq_db(manuals_root)
+        faqs_list = faq_db_data.get("faqs", [])
+        
+        if faqs_list:
+            st.markdown(f"현재 시스템에 등록된 FAQ 사전 답변은 총 **{len(faqs_list)}개**입니다.")
+            
+            # 테이블 헤더
+            col_hdr_cat, col_hdr_q, col_hdr_a, col_hdr_act = st.columns([1.5, 3.5, 5.0, 1.5])
+            with col_hdr_cat:
+                st.markdown("**🏷️ 분야**")
+            with col_hdr_q:
+                st.markdown("**❓ 등록된 질문**")
+            with col_hdr_a:
+                st.markdown("**💬 사전 답변 요약 (최대 100자)**")
+            with col_hdr_act:
+                st.markdown("**⚙️ 작업**")
+            st.markdown("<hr style='margin: 8px 0; border-color: #e2e8f0;' />", unsafe_allow_html=True)
+            
+            for f_idx, faq_item in enumerate(faqs_list):
+                q_text = faq_item.get('question', '')
+                a_text = faq_item.get('answer', '')
+                c_text = faq_item.get('category', '미지정')
+                
+                col_cat, col_q, col_a, col_action = st.columns([1.5, 3.5, 5.0, 1.5])
+                with col_cat:
+                    st.markdown(f"<span style='font-size: 0.9rem;'>{c_text}</span>", unsafe_allow_html=True)
+                with col_q:
+                    st.markdown(f"<span style='font-size: 0.9rem; font-weight: 500;'>{q_text}</span>", unsafe_allow_html=True)
+                with col_a:
+                    ans_summary = a_text
+                    if len(ans_summary) > 100:
+                        ans_summary = ans_summary[:100] + "..."
+                    ans_summary = ans_summary.replace("\n", " ")
+                    st.markdown(f"<span style='font-size: 0.9rem; color: #475569;'>{ans_summary}</span>", unsafe_allow_html=True)
+                with col_action:
+                    btn_key = f"del_faq_btn_{f_idx}"
+                    if st.button("🗑️ 삭제", key=btn_key, type="secondary", use_container_width=True):
+                        if delete_faq(q_text, manuals_root):
+                            st.toast(f"🎉 '{q_text[:15]}...' FAQ가 성공적으로 삭제되었습니다.")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error("❌ 삭제 처리에 실패했습니다.")
+                st.markdown("<hr style='margin: 4px 0; border-color: #f1f5f9;' />", unsafe_allow_html=True)
+        else:
+            st.info("ℹ️ 현재 등록된 FAQ 사전 답변이 없습니다. 질문-답변 과정에서 하단의 '📌 이 답변을 FAQ에 등록' 버튼을 사용하여 등록할 수 있습니다.")
+
 # 2. Q&A 뷰 렌더링 함수 정의
 def render_qa_content():
     if st.session_state.show_manual:

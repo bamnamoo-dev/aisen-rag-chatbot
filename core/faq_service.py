@@ -137,3 +137,18 @@ def register_faq(question, answer, category, client, model_name="gemini-embeddin
         })
         
     return save_faq_db(db, manuals_root)
+
+def delete_faq(question_text, manuals_root="manuals"):
+    """질문 텍스트가 일치하는 FAQ 항목을 찾아 DB에서 영구 삭제합니다."""
+    db = load_faq_db(manuals_root)
+    faqs = db.get("faqs", [])
+    
+    target_q = question_text.strip()
+    original_len = len(faqs)
+    new_faqs = [faq for faq in faqs if faq.get("question", "").strip() != target_q]
+    
+    if len(new_faqs) < original_len:
+        db["faqs"] = new_faqs
+        return save_faq_db(db, manuals_root)
+    return False
+
