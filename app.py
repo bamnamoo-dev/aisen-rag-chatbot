@@ -96,6 +96,18 @@ if "rebuild_trigger" not in st.session_state:
 if "show_manual" not in st.session_state:
     st.session_state.show_manual = False
 
+if "editing_faq_idx" not in st.session_state:
+    st.session_state.editing_faq_idx = None
+if "edit_old_question" not in st.session_state:
+    st.session_state.edit_old_question = ""
+if "edit_question" not in st.session_state:
+    st.session_state.edit_question = ""
+if "edit_answer" not in st.session_state:
+    st.session_state.edit_answer = ""
+if "edit_category" not in st.session_state:
+    st.session_state.edit_category = ""
+
+
 manuals_root = "manuals"
 
 # 파일 바이너리 로더
@@ -635,57 +647,133 @@ def render_admin_dashboard():
             else:
                 st.info("ℹ️ 현재 수집된 사용자 피드백 데이터가 없습니다. 챗봇 질문 시 하단에 피드백이 등록되면 여기에 표시됩니다.")
 
-        # 1-D. FAQ 캐시 관리 섹션
-        st.markdown("---")
-        st.markdown("### 📄 5. FAQ (자주하는 질문) 캐시 관리")
+
+def render_faq_dashboard():
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; padding: 20px 28px; border-radius: 12px; margin-bottom: 20px; text-align: left;">
+            <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0 0 4px 0; color: white;">📑 FAQ (자주하는 질문) 캐시 관리자</h2>
+            <p style="font-size: 0.88rem; opacity: 0.9; margin: 0;">자주 유입되는 질문에 대한 AI의 사전 표준 답변을 직접 수정하거나 영구 삭제할 수 있습니다.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    from core.faq_service import load_faq_db, delete_faq, update_faq
+    faq_db_data = load_faq_db(manuals_root)
+    faqs_list = faq_db_data.get("faqs", [])
+
+    # 카테고리(분야) 목록 가져오기
+    all_cats_raw = [d for d in os.listdir(manuals_root) if os.path.isdir(os.path.join(manuals_root, d))]
+    special_cats = ["상위법령", "자치법규", "조례규칙"]
+    normal_cats = sorted([c for c in all_cats_raw if c not in special_cats], key=lambda x: (1 if "기타" in x else 0, x))
+    all_cats = special_cats + normal_cats
+
+    # 1. 수정 에디터 폼 (인라인 렌더링)
+    if st.session_state.editing_faq_idx is not None:
+        st.markdown("<div style='background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 25px;'>", unsafe_allow_html=True)
+        st.markdown("### ✏️ FAQ 수정 에디터")
         
-        from core.faq_service import load_faq_db, delete_faq
-        faq_db_data = load_faq_db(manuals_root)
-        faqs_list = faq_db_data.get("faqs", [])
+        edit_idx = st.session_state.editing_faq_idx
+        curr_cat = st.session_state.edit_category
+        cat_index = all_cats.index(curr_cat) if curr_cat in all_cats else 0
+        new_cat = st.selectbox("분야 (카테고리)", all_cats, index=cat_index, key="edit_faq_cat_sel")
+        new_q = st.text_input("질문 내용", value=st.session_state.edit_question, key="edit_faq_q_input")
+        new_a = st.text_area("사전 답변", value=st.session_state.edit_answer, height=200, key="edit_faq_a_input")
         
-        if faqs_list:
-            st.markdown(f"현재 시스템에 등록된 FAQ 사전 답변은 총 **{len(faqs_list)}개**입니다.")
+        col_save, col_cancel = st.columns([1, 1])
+        with col_save:
+            if st.button("💾 저장", type="primary", use_container_width=True, key="edit_faq_save_btn"):
+                if not new_q.strip() or not new_a.strip():
+                    st.error("질문과 답변 내용을 모두 입력해 주세요.")
+                else:
+                    with st.spinner("FAQ를 업데이트 중입니다..."):
+                        success = update_faq(
+                            old_question=st.session_state.edit_old_question,
+                            new_question=new_q,
+                            new_answer=new_a,
+                            new_category=new_cat,
+                            client=client,
+                            model_name=LOCAL_MODEL_NAME,
+                            manuals_root=manuals_root
+                        )
+                        if success:
+                            st.toast("🎉 FAQ가 성공적으로 수정되었습니다.")
+                            st.session_state.editing_faq_idx = None
+                            st.session_state.edit_old_question = ""
+                            st.session_state.edit_question = ""
+                            st.session_state.edit_answer = ""
+                            st.session_state.edit_category = ""
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error("❌ FAQ 수정 처리에 실패했습니다. (임베딩 모델 상태를 확인해 주세요)")
+        with col_cancel:
+            if st.button("❌ 취소", type="secondary", use_container_width=True, key="edit_faq_cancel_btn"):
+                st.session_state.editing_faq_idx = None
+                st.session_state.edit_old_question = ""
+                st.session_state.edit_question = ""
+                st.session_state.edit_answer = ""
+                st.session_state.edit_category = ""
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+    # 2. FAQ 리스트 테이블
+    if faqs_list:
+        st.markdown(f"현재 시스템에 등록된 FAQ 사전 답변은 총 **{len(faqs_list)}개**입니다.")
+        
+        # 테이블 헤더
+        col_hdr_cat, col_hdr_q, col_hdr_a, col_hdr_act = st.columns([1.5, 3.5, 4.5, 2.5])
+        with col_hdr_cat:
+            st.markdown("**🏷️ 분야**")
+        with col_hdr_q:
+            st.markdown("**❓ 등록된 질문**")
+        with col_hdr_a:
+            st.markdown("**💬 사전 답변 요약 (최대 100자)**")
+        with col_hdr_act:
+            st.markdown("**⚙️ 작업**")
+        st.markdown("<hr style='margin: 8px 0; border-color: #e2e8f0;' />", unsafe_allow_html=True)
+        
+        for f_idx, faq_item in enumerate(faqs_list):
+            q_text = faq_item.get('question', '')
+            a_text = faq_item.get('answer', '')
+            c_text = faq_item.get('category', '미지정')
             
-            # 테이블 헤더
-            col_hdr_cat, col_hdr_q, col_hdr_a, col_hdr_act = st.columns([1.5, 3.5, 5.0, 1.5])
-            with col_hdr_cat:
-                st.markdown("**🏷️ 분야**")
-            with col_hdr_q:
-                st.markdown("**❓ 등록된 질문**")
-            with col_hdr_a:
-                st.markdown("**💬 사전 답변 요약 (최대 100자)**")
-            with col_hdr_act:
-                st.markdown("**⚙️ 작업**")
-            st.markdown("<hr style='margin: 8px 0; border-color: #e2e8f0;' />", unsafe_allow_html=True)
-            
-            for f_idx, faq_item in enumerate(faqs_list):
-                q_text = faq_item.get('question', '')
-                a_text = faq_item.get('answer', '')
-                c_text = faq_item.get('category', '미지정')
-                
-                col_cat, col_q, col_a, col_action = st.columns([1.5, 3.5, 5.0, 1.5])
-                with col_cat:
-                    st.markdown(f"<span style='font-size: 0.9rem;'>{c_text}</span>", unsafe_allow_html=True)
-                with col_q:
-                    st.markdown(f"<span style='font-size: 0.9rem; font-weight: 500;'>{q_text}</span>", unsafe_allow_html=True)
-                with col_a:
-                    ans_summary = a_text
-                    if len(ans_summary) > 100:
-                        ans_summary = ans_summary[:100] + "..."
-                    ans_summary = ans_summary.replace("\n", " ")
-                    st.markdown(f"<span style='font-size: 0.9rem; color: #475569;'>{ans_summary}</span>", unsafe_allow_html=True)
-                with col_action:
+            col_cat, col_q, col_a, col_action = st.columns([1.5, 3.5, 4.5, 2.5])
+            with col_cat:
+                st.markdown(f"<span style='font-size: 0.9rem;'>{c_text}</span>", unsafe_allow_html=True)
+            with col_q:
+                st.markdown(f"<span style='font-size: 0.9rem; font-weight: 500;'>{q_text}</span>", unsafe_allow_html=True)
+            with col_a:
+                ans_summary = a_text
+                if len(ans_summary) > 100:
+                    ans_summary = ans_summary[:100] + "..."
+                ans_summary = ans_summary.replace("\n", " ")
+                st.markdown(f"<span style='font-size: 0.9rem; color: #475569;'>{ans_summary}</span>", unsafe_allow_html=True)
+            with col_action:
+                btn_col1, btn_col2 = st.columns(2)
+                with btn_col1:
+                    edit_key = f"edit_faq_btn_{f_idx}"
+                    if st.button("📝 수정", key=edit_key, type="secondary", use_container_width=True):
+                        st.session_state.editing_faq_idx = f_idx
+                        st.session_state.edit_old_question = q_text
+                        st.session_state.edit_question = q_text
+                        st.session_state.edit_answer = a_text
+                        st.session_state.edit_category = c_text
+                        st.rerun()
+                with btn_col2:
                     btn_key = f"del_faq_btn_{f_idx}"
                     if st.button("🗑️ 삭제", key=btn_key, type="secondary", use_container_width=True):
                         if delete_faq(q_text, manuals_root):
                             st.toast(f"🎉 '{q_text[:15]}...' FAQ가 성공적으로 삭제되었습니다.")
+                            if st.session_state.editing_faq_idx == f_idx:
+                                st.session_state.editing_faq_idx = None
                             time.sleep(0.5)
                             st.rerun()
                         else:
                             st.error("❌ 삭제 처리에 실패했습니다.")
-                st.markdown("<hr style='margin: 4px 0; border-color: #f1f5f9;' />", unsafe_allow_html=True)
-        else:
-            st.info("ℹ️ 현재 등록된 FAQ 사전 답변이 없습니다. 질문-답변 과정에서 하단의 '📌 이 답변을 FAQ에 등록' 버튼을 사용하여 등록할 수 있습니다.")
+            st.markdown("<hr style='margin: 4px 0; border-color: #f1f5f9;' />", unsafe_allow_html=True)
+    else:
+        st.info("ℹ️ 현재 등록된 FAQ 사전 답변이 없습니다. 질문-답변 과정에서 하단의 '📌 이 답변을 FAQ에 등록' 버튼을 사용하여 등록할 수 있습니다.")
+
 
 # 2. Q&A 뷰 렌더링 함수 정의
 def render_qa_content():
@@ -1353,7 +1441,7 @@ if st.session_state.admin_mode:
     # 가로형 버튼 그룹을 사용해 탭처럼 깔끔하게 뷰 전환
     admin_view = st.radio(
         "뷰 모드 선택",
-        ["💬 대화형 Q&A", "⚙️ RAG 관리자 대시보드"],
+        ["💬 대화형 Q&A", "⚙️ RAG 관리자 대시보드", "📑 FAQ 관리"],
         horizontal=True,
         key="admin_view_select",
         label_visibility="collapsed" # 레이블을 숨겨 탭처럼 만듦
@@ -1361,7 +1449,9 @@ if st.session_state.admin_mode:
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     if admin_view == "💬 대화형 Q&A":
         render_qa_content()
-    else:
+    elif admin_view == "⚙️ RAG 관리자 대시보드":
         render_admin_dashboard()
+    else:
+        render_faq_dashboard()
 else:
     render_qa_content()

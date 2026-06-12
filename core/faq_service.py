@@ -152,3 +152,37 @@ def delete_faq(question_text, manuals_root="manuals"):
         return save_faq_db(db, manuals_root)
     return False
 
+def update_faq(old_question, new_question, new_answer, new_category, client, model_name="gemini-embedding-2", manuals_root="manuals"):
+    """기존 FAQ 항목을 새로운 질문, 답변, 분야 정보와 함께 업데이트합니다. 질문이 변경된 경우 새로운 임베딩을 구합니다."""
+    db = load_faq_db(manuals_root)
+    faqs = db.get("faqs", [])
+    
+    target_idx = -1
+    for idx, faq in enumerate(faqs):
+        if faq.get("question", "").strip() == old_question.strip():
+            target_idx = idx
+            break
+            
+    if target_idx == -1:
+        return False
+        
+    # 질문이 변경된 경우에만 임베딩 새로 생성
+    if old_question.strip() == new_question.strip():
+        embedding = faqs[target_idx].get("embedding")
+    else:
+        embedding = get_single_embedding(new_question, client, model_name)
+        if embedding is None:
+            return False
+            
+    faqs[target_idx] = {
+        "question": new_question.strip(),
+        "answer": new_answer,
+        "category": new_category,
+        "embedding": embedding,
+        "recommendations": faqs[target_idx].get("recommendations", []),
+        "created_at": time.time()
+    }
+    
+    return save_faq_db(db, manuals_root)
+
+
