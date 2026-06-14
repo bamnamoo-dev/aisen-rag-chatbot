@@ -33,6 +33,7 @@
 9. **Streamlit Memory Optimization & Cache Invalidation**: 지침서 변경 시 캐시 갱신을 보장하는 폴더 해시 기반 자동 캐시 무효화 및 메모리 누수 방지를 위한 LRU 캐시 엔트리 제한(max_entries=3) 적용.
 10. **Priority-Based Reordering & Cross-Folder Routing (2026-06-12 적용)**: 돈 관련(예산/지출/세입) 및 계약 관련 질문 발생 시 최우선 지침 파일(2026 예산지침 및 계약지침)의 청크를 컨텍스트의 최상단에 강제 배치하고 연관 폴더와 교차 병합 검색을 수행하여 정보의 일관성과 최신성 확보.
 11. **FAQ Semantic Caching & Web Sync (Git Push) (2026-06-12 적용)**: 자주 묻는 질문에 대한 고품질 사전 표준 답변(FAQ)을 등록/수정/삭제하는 관리 대시보드와, 로컬 환경에서 터미널 없이 버튼 클릭 한 번으로 원격 깃허브 저장소(`manuals/faq_db.pkl`)에 자동 커밋 & 푸시하여 Streamlit Cloud와 동기화하는 원클릭 동기화 모듈 탑재.
+12. **Admin Security Hardening & Streamlit Version Pinning (2026-06-14 적용)**: 소스 코드 내부의 평문 관리자 비밀번호 폴백값을 안전한 동적 보안 랜덤 토큰(cryptographically secure random token) 생성 로직으로 전면 교체하여 자격 증명 유출을 원천 방지하고, UI 조작 자바스크립트의 안정성을 보장하기 위해 배포 버전(`streamlit==1.56.0`)을 핀(Pin) 고정함.
 
 ### 5. 운영 지표 (Target Metrics)
 - **동시 접속**: 무료 티어 기준 하루 약 100~500명 이상의 질문 처리 가능 (RAG 최적화 적용 결과).
@@ -40,5 +41,5 @@
 - **정확도**: 참고한 실제 파일명과 페이지 번호를 답변 하단에 100% 명시.
 
 ---
-*Last Updated: 2026-06-12*
+*Last Updated: 2026-06-14*
 
