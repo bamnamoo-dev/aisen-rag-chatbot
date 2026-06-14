@@ -357,7 +357,10 @@ if not st.session_state.admin_mode:
     with st.sidebar.expander("🔑 관리자 로그인", expanded=False):
         admin_pw_input = st.text_input("비밀번호 입력", type="password", key="admin_pw_input")
         if st.button("로그인", use_container_width=True):
-            correct_pw = os.getenv("ADMIN_PASSWORD", "@@admin1601")
+            correct_pw = os.getenv("ADMIN_PASSWORD")
+            if not correct_pw:
+                import secrets
+                correct_pw = secrets.token_urlsafe(32)
             if admin_pw_input == correct_pw:
                 st.session_state.admin_mode = True
                 st.sidebar.success("관리자 인증 성공!")
