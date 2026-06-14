@@ -1,11 +1,22 @@
 import streamlit as st
+import os
 from google import genai
 from app_config import GEMINI_PRIORITY
+from services.fallback_client import FallbackGenAIClient
 
 # 제미나이 클라이언트 초기화 (캐싱 적용)
 @st.cache_resource
 def get_genai_client(api_key):
-    return genai.Client(api_key=api_key)
+    # 환경변수에서 이중 API 키를 가져옵니다. (없을 시 기본 api_key를 무료 키로 간주)
+    free_key = os.getenv("GEMINI_FREE_API_KEY") or api_key
+    paid_key = os.getenv("GEMINI_PAID_API_KEY")
+    
+    if free_key and paid_key:
+        return FallbackGenAIClient(free_key, paid_key)
+    else:
+        # 이중 키 미설정 시 기존 싱글 키 연동 유지 (하위 호환성 보장)
+        return genai.Client(api_key=api_key)
+
 
 @st.cache_resource
 def get_generation_model_name(_client, exclude_models=None):

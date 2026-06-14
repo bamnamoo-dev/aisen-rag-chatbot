@@ -21,6 +21,7 @@ sys.modules['streamlit'] = MagicMock()
 # Now we can safely import our classes and functions
 from core.parser import RecursiveCharacterTextSplitter, table_to_markdown, parse_single_pdf, parse_single_md
 from core.vector_db import LocalVectorDB, get_folder_hash, get_file_hash
+from services.llm_service import get_genai_client
 import fitz
 
 def get_pdf_chunks_cli(folder_path):
@@ -243,7 +244,7 @@ def main():
         sys.exit(1)
         
     model_name = "gemini-embedding-2"
-    client = genai.Client(api_key=api_key)
+    client = get_genai_client(api_key)
     
     # 카테고리가 인자로 전달된 경우
     if len(sys.argv) >= 2:
