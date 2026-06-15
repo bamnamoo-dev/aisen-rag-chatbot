@@ -34,6 +34,8 @@
 10. **Priority-Based Reordering & Cross-Folder Routing (2026-06-12 적용)**: 돈 관련(예산/지출/세입) 및 계약 관련 질문 발생 시 최우선 지침 파일(2026 예산지침 및 계약지침)의 청크를 컨텍스트의 최상단에 강제 배치하고 연관 폴더와 교차 병합 검색을 수행하여 정보의 일관성과 최신성 확보.
 11. **FAQ Semantic Caching & Web Sync (Git Push) (2026-06-12 적용)**: 자주 묻는 질문에 대한 고품질 사전 표준 답변(FAQ)을 등록/수정/삭제하는 관리 대시보드와, 로컬 환경에서 터미널 없이 버튼 클릭 한 번으로 원격 깃허브 저장소(`manuals/faq_db.pkl`)에 자동 커밋 & 푸시하여 Streamlit Cloud와 동기화하는 원클릭 동기화 모듈 탑재.
 12. **Admin Security Hardening & Streamlit Version Pinning (2026-06-14 적용)**: 소스 코드 내부의 평문 관리자 비밀번호 폴백값을 안전한 동적 보안 랜덤 토큰(cryptographically secure random token) 생성 로직으로 전면 교체하여 자격 증명 유출을 원천 방지하고, UI 조작 자바스크립트의 안정성을 보장하기 위해 배포 버전(`streamlit==1.56.0`)을 핀(Pin) 고정함.
+13. **Premium UI/UX Renewal — Glassmorphism Card & Modal System (2026-06-15 적용)**: 기존 Streamlit `st.popover` 기반 출처 표시를 프리미엄 2~3열 반응형 카드 그리드 + 글라스모피즘 JS 모달 시스템으로 전면 교체하였습니다. 말풍선 디자인(사용자/AI 아바타, 그라디언트 배경, 슬라이드인 애니메이션), 사이드바 글라스모피즘 패널, 채팅 입력창 상단 퀵 카테고리 칩 버튼도 함께 리뉴얼 적용하여 충실이(ChulSili) 수준의 UX를 구현하였습니다.
+14. **DOMPurify onclick 우회 — data-modal-id + JS 이벤트 델리게이션 (2026-06-15 적용)**: Streamlit 프론트엔드 React 레이어가 `unsafe_allow_html=True` 환경에서도 DOMPurify를 통해 `onclick` 등 이벤트 핸들러 속성을 자동 제거하는 문제를 진단하고, HTML 요소에 `data-modal-id` 커스텀 속성을 부여하여 이미 실행 중인 `RAW_JS` 전역 스크립트가 `document.addEventListener('click', ...)` 이벤트 델리게이션으로 이를 감지하도록 아키텍처를 전환하여 모달 클릭 인터랙션을 완전히 복원하였습니다.
 
 ### 5. 운영 지표 (Target Metrics)
 - **동시 접속**: 무료 티어 기준 하루 약 100~500명 이상의 질문 처리 가능 (RAG 최적화 적용 결과).
@@ -41,5 +43,5 @@
 - **정확도**: 참고한 실제 파일명과 페이지 번호를 답변 하단에 100% 명시.
 
 ---
-*Last Updated: 2026-06-14*
+*Last Updated: 2026-06-15*
 

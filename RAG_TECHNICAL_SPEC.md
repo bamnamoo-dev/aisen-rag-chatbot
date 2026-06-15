@@ -300,3 +300,91 @@ response = client.models.embed_content(
 * **해결책 (보안 하드코딩 제거 + 버전 핀 고정)**:
   1. **동적 보안 랜덤 토큰 폴백**: `os.getenv("ADMIN_PASSWORD")` 호출 시 기본 비밀번호 대신, 환경 변수가 부재할 경우 `secrets.token_urlsafe(32)`를 호출하여 임의의 32바이트 랜덤 토큰을 생성하게 하였습니다. 이에 따라 명시적 환경 설정 없이는 어드민 페이지 접근이 원천 차단됩니다.
   2. **라이브러리 버전 고정 (requirements.txt)**: 배포 버전 불일치로 인한 오작동을 예방하기 위해 패키지 파일 내 Streamlit 버전을 `streamlit==1.56.0`으로 핀(Pin) 고정하여 강제 탑재하였습니다.
+
+---
+
+## 7. UI/UX 프리미엄 리뉴얼 기술 명세 (Premium UI/UX Renewal — 2026-06-15 적용)
+
+### 7.1. 프리미엄 참고 카드 그리드 + 글라스모피즘 모달 시스템
+
+기존의 Streamlit 기본 `st.popover` 위젯 기반 출처 표시를 **순수 HTML/CSS 프리미엄 카드 그리드 + 글라스모피즘 JS 모달** 구조로 전면 대체하였습니다.
+
+#### 7.1.1. HTML 인덴트 코드블록 파싱 버그 수정
+
+* **버그**: `st.markdown(unsafe_allow_html=True)`에 들여쓰기가 있는 f-string HTML을 전달하면 Streamlit의 마크다운 파서가 4칸 이상 들여쓰기 시작 블록을 **인덴트 코드블록**으로 오인하여 HTML 태그를 이스케이프하고 텍스트로 출력하는 문제가 있었습니다.
+* **해결**: 모든 HTML 생성 f-string을 **단일 라인 문자열 연결(parentheses + implicit string concatenation)** 방식으로 전환하여 마크다운 파서가 코드블록으로 오인하는 여지를 원천 차단하였습니다.
+
+```python
+# ❌ 이전: 들여쓰기 있는 멀티라인 f-string → 코드블록 오인
+grid_html = f"""
+                    <div class="ref-section-premium">
+                        ...
+                    </div>
+                    """
+
+# ✅ 수정: 단일 라인 문자열 연결
+grid_html = (
+    f'<div class="ref-section-premium">'
+    f'<div class="ref-grid-premium">{cards_combined}</div>'
+    f'</div>'
+    f'{modals_combined}'
+)
+```
+
+#### 7.1.2. DOMPurify `onclick` 우회 — `data-modal-id` + JS 이벤트 델리게이션
+
+* **버그**: Streamlit 프론트엔드 React 레이어는 `unsafe_allow_html=True` 환경에서도 DOMPurify 라이브러리를 통해 `onclick`, `onerror` 등 **이벤트 핸들러 속성을 DOM에 삽입하기 전 자동 제거**합니다. 이로 인해 카드의 `onclick="openPremiumModal(...)"` 호출이 무시되어 클릭 시 아무 반응이 없었습니다.
+* **해결**: 이벤트 핸들러 속성 대신 **`data-modal-id` 커스텀 속성**을 HTML 요소에 부여하고, 이미 eval로 실행 중인 `RAW_JS` 전역 스크립트에 `document.addEventListener('click', ...)` 이벤트 델리게이션을 추가하여 클릭 이벤트를 감지하도록 아키텍처를 전환하였습니다.
+
+```python
+# app.py — 카드 HTML
+card_html = (
+    f'<div class="ref-card-premium" data-modal-id="{modal_id}" style="cursor:pointer;">'
+    ...
+)
+
+# app.py — 모달 닫기 버튼 HTML
+f'<button class="premium-modal-close-btn" data-modal-id="{modal_id}">&times;</button>'
+```
+
+```javascript
+// app_config.py RAW_JS — 이벤트 델리게이션
+if (!window.premiumModalBound) {
+    window.premiumModalBound = true;
+    document.addEventListener('click', function(e) {
+        const card = e.target.closest('.ref-card-premium');
+        if (card) {
+            const mId = card.getAttribute('data-modal-id');
+            if (mId) { window.openPremiumModal(mId); return; }
+        }
+        const closeBtn = e.target.closest('.premium-modal-close-btn');
+        if (closeBtn) {
+            const mId = closeBtn.getAttribute('data-modal-id');
+            if (mId) { window.closePremiumModal(mId); return; }
+        }
+        // 오버레이(배경) 클릭 → 모달 닫기
+        if (e.target.classList.contains('premium-modal-overlay')) {
+            const mId = e.target.getAttribute('data-modal-id');
+            if (mId) { window.closePremiumModal(mId); return; }
+        }
+    });
+}
+```
+
+> `data-*` 속성은 DOMPurify의 허용 목록에 포함되어 있어 제거되지 않습니다.
+
+### 7.2. 말풍선 & 사이드바 글라스모피즘 디자인 시스템
+
+`app_config.py`의 `GLOBAL_CSS_STYLE`에 다음 디자인 시스템을 적용하였습니다.
+
+| 요소 | 적용 기술 |
+|:---|:---|
+| 사용자 말풍선 | 파란 그라디언트 배경, 우측 정렬, 슬라이드인 애니메이션 |
+| AI 말풍선 | 흰색 카드형, 좌측 AI 아바타 아이콘, 박스 셰도우 |
+| 사이드바 패널 | `backdrop-filter: blur(20px)` 글라스모피즘 |
+| 참고 카드 그리드 | 2~3열 반응형 CSS Grid, 호버 리프트 효과 |
+| 모달 오버레이 | `backdrop-filter: blur(8px)`, scale 진입 애니메이션 |
+| 퀵 칩 버튼 | 채팅 입력창 상단, 카테고리 단축 바로가기 |
+
+---
+*Last Updated: 2026-06-15*
