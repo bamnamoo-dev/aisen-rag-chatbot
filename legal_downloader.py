@@ -196,6 +196,18 @@ CORE_TARGETS = [
         "repo": "legalize-kr",
         "path": "kr/정보통신공사업법/시행규칙(과학기술정보통신부령).md",
         "filename": "정보통신공사업법_시행규칙.md"
+    },
+    {
+        "name": "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률",
+        "repo": "legalize-kr",
+        "path": "kr/옥외광고물등의관리와옥외광고산업진흥에관한법률/법률.md",
+        "filename": "옥외광고물법.md"
+    },
+    {
+        "name": "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률 시행령",
+        "repo": "legalize-kr",
+        "path": "kr/옥외광고물등의관리와옥외광고산업진흥에관한법률/시행령.md",
+        "filename": "옥외광고물법_시행령.md"
     }
 ]
 
@@ -627,7 +639,9 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
     
     # 1. 기본 정보 추출
     title_elem = root.find(".//자치법규명")
-    title = title_elem.text.strip() if title_elem is not None and title_elem.text else "자치법규"
+    if title_elem is None:
+        title_elem = root.find(".//법령명한글")
+    title = title_elem.text.strip() if title_elem is not None and title_elem.text else "법령"
     
     md_lines = []
     md_lines.append(f"# {title}\n")
@@ -635,6 +649,8 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
     # 메타정보
     meta_mapping = {
         "지자체기관명": "지자체명",
+        "소관부처": "소관부처",
+        "법령구분명": "종류",
         "자치법규종류": "종류",
         "공포일자": "공포일자",
         "공포번호": "공포번호",
@@ -648,6 +664,8 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
             
     # 출처 추가
     mst_elem = root.find(".//자치법규일련번호")
+    if mst_elem is None:
+        mst_elem = root.find(".//법령일련번호")
     if mst_elem is not None and mst_elem.text:
         md_lines.append(f"- **출처**: [국가법령정보센터](https://www.law.go.kr/법령/{urllib.parse.quote(title)})")
         
@@ -744,6 +762,7 @@ def parse_ordinance_xml(xml_data: bytes) -> str:
 def download_core_laws(laws_dir="manuals/상위법령", ordinances_dir="manuals/자치법규"):
     os.makedirs(laws_dir, exist_ok=True)
     os.makedirs(ordinances_dir, exist_ok=True)
+    oc_key = os.getenv("LAW_API_KEY")
     print(f"📥 법령/조례 데이터베이스 빌드를 시작합니다...\n   - 상위법령 저장소: {laws_dir}\n   - 자치법규 저장소: {ordinances_dir}\n")
     
     success_count = 0
@@ -777,11 +796,44 @@ def download_core_laws(laws_dir="manuals/상위법령", ordinances_dir="manuals/
             print(f"    ✅ 성공: {filename} ({file_size_kb:.1f} KB) 저장 완료.")
             success_count += 1
         except Exception as e:
-            print(f"    ❌ 실패: {name} 다운로드 중 오류 발생 -> {e}")
+            print(f"    ⚠️ GitHub 다운로드 실패: {name} ({e}). 법제처 API Fallback 시도 중...")
+            if oc_key:
+                try:
+                    # 1. 법령 검색을 통해 MST(법령일련번호) 획득
+                    query_encoded = urllib.parse.quote(name)
+                    search_url = f"https://www.law.go.kr/DRF/lawSearch.do?OC={oc_key}&target=law&type=XML&query={query_encoded}"
+                    search_xml = make_request_with_retry(search_url)
+                    search_root = ET.fromstring(search_xml)
+                    
+                    mst = None
+                    for law_item in search_root.findall(".//law"):
+                        mst_elem = law_item.find("법령일련번호")
+                        if mst_elem is not None:
+                            mst = mst_elem.text.strip()
+                            break
+                    
+                    if mst:
+                        # 2. 본문 XML 다운로드 및 마크다운 파싱
+                        law_url = f"https://www.law.go.kr/DRF/lawService.do?OC={oc_key}&target=law&MST={mst}&type=XML"
+                        law_xml = make_request_with_retry(law_url)
+                        markdown_content = parse_ordinance_xml(law_xml)
+                        
+                        dest_path = os.path.join(laws_dir, filename)
+                        with open(dest_path, "w", encoding="utf-8") as f:
+                            f.write(markdown_content)
+                            
+                        file_size_kb = os.path.getsize(dest_path) / 1024
+                        print(f"    ✅ 법제처 API 성공: {filename} ({file_size_kb:.1f} KB) 저장 완료.")
+                        success_count += 1
+                    else:
+                        print(f"    ❌ 법제처 API 실패: '{name}'에 매칭되는 법령을 찾을 수 없습니다.")
+                except Exception as api_err:
+                    print(f"    ❌ 법제처 API 실패: {api_err}")
+            else:
+                print(f"    ❌ 최종 실패: LAW_API_KEY가 설정되어 있지 않아 법제처 API Fallback을 건너뜁니다.")
             
     # 2. 로컬 고유 규정 및 폴백용 자치법규 빌드 -> 파일명에 따라 분기하여 저장
     print("\n--- [2/3] ⚖️ 로컬 고유 규정 및 폴백 자치법규 파일 생성 ---")
-    oc_key = os.getenv("LAW_API_KEY")
     
     # 자치법규를 API로 다운로드할 예정인 경우, LOCAL_STATUTES 중 API 대체 대상은 로컬 생성 목록에서 필터링하여 제외
     if oc_key:
