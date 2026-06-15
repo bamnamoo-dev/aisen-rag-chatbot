@@ -208,6 +208,24 @@ CORE_TARGETS = [
         "repo": "legalize-kr",
         "path": "kr/옥외광고물등의관리와옥외광고산업진흥에관한법률/시행령.md",
         "filename": "옥외광고물법_시행령.md"
+    },
+    {
+        "name": "중소기업제품 구매촉진 및 판로지원에 관한 법률",
+        "repo": "legalize-kr",
+        "path": "kr/중소기업제품구매촉진및판로지원에관한법률/법률.md",
+        "filename": "판로지원법.md"
+    },
+    {
+        "name": "중소기업제품 구매촉진 및 판로지원에 관한 법률 시행령",
+        "repo": "legalize-kr",
+        "path": "kr/중소기업제품구매촉진및판로지원에관한법률/시행령.md",
+        "filename": "판로지원법_시행령.md"
+    },
+    {
+        "name": "중소기업제품 구매촉진 및 판로지원에 관한 법률 시행규칙",
+        "repo": "legalize-kr",
+        "path": "kr/중소기업제품구매촉진및판로지원에관한법률/시행규칙.md",
+        "filename": "판로지원법_시행규칙.md"
     }
 ]
 
