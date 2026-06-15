@@ -16,7 +16,19 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 # Mock Streamlit to prevent import/runtime errors when importing modules
 from unittest.mock import MagicMock
-sys.modules['streamlit'] = MagicMock()
+class DummyStreamlit:
+    def cache_resource(self, *args, **kwargs):
+        if args and callable(args[0]):
+            return args[0]
+        return lambda func: func
+    def cache_data(self, *args, **kwargs):
+        if args and callable(args[0]):
+            return args[0]
+        return lambda func: func
+    def __getattr__(self, name):
+        return MagicMock()
+
+sys.modules['streamlit'] = DummyStreamlit()
 
 # Now we can safely import our classes and functions
 from core.parser import RecursiveCharacterTextSplitter, table_to_markdown, parse_single_pdf, parse_single_md

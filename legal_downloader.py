@@ -124,6 +124,12 @@ CORE_TARGETS = [
         "repo": "legalize-kr",
         "path": "kr/학교안전사고예방및보상에관한법률/법률.md",
         "filename": "학교안전사고예방및보상법.md"
+    },
+    {
+        "name": "건설산업기본법",
+        "repo": "legalize-kr",
+        "path": "kr/건설산업기본법/법률.md",
+        "filename": "건설산업기본법.md"
     }
 ]
 
