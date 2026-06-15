@@ -932,7 +932,30 @@ RAW_JS = """
             });
         }
 
-        // 글로벌 프리미엄 모달 제어 함수
+        // 참고 카드 & 모달 이벤트 델리게이션 (data-modal-id 방식)
+        if (!window.premiumModalBound) {
+            window.premiumModalBound = true;
+            document.addEventListener('click', function(e) {
+                // 1) 카드 클릭 → 모달 열기
+                const card = e.target.closest('.ref-card-premium');
+                if (card) {
+                    const mId = card.getAttribute('data-modal-id');
+                    if (mId) { window.openPremiumModal(mId); return; }
+                }
+                // 2) 닫기 버튼 클릭 → 모달 닫기
+                const closeBtn = e.target.closest('.premium-modal-close-btn');
+                if (closeBtn) {
+                    const mId = closeBtn.getAttribute('data-modal-id');
+                    if (mId) { window.closePremiumModal(mId); return; }
+                }
+                // 3) 오버레이(배경) 클릭 → 모달 닫기
+                if (e.target.classList && e.target.classList.contains('premium-modal-overlay')) {
+                    const mId = e.target.getAttribute('data-modal-id');
+                    if (mId) { window.closePremiumModal(mId); return; }
+                }
+            });
+        }
+
         window.openPremiumModal = function(id) {
             const modal = document.getElementById('modal-' + id);
             if (modal) {

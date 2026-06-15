@@ -938,9 +938,9 @@ def render_qa_content():
                             
                         modal_id = f"modal_{idx}_{c_idx}"
                         
-                        # 개별 카드 HTML
+                        # 개별 카드 HTML (data-modal-id 방식, JS 이벤트 델리게이션으로 처리)
                         card_html = (
-                            f'<div class="ref-card-premium" onclick="openPremiumModal(\'{modal_id}\')" title="{metadata}">'
+                            f'<div class="ref-card-premium" data-modal-id="{modal_id}" title="{metadata}" style="cursor:pointer;">'
                             f'<div class="ref-icon-premium" style="background-color:{icon_bg}!important;color:{icon_color}!important;">{icon}</div>'
                             f'<div class="ref-info-premium">'
                             f'<div class="ref-title-premium">{filename_display}</div>'
@@ -956,18 +956,18 @@ def render_qa_content():
                         safe_content = py_html.escape(content_ui).replace("\n", "<br>")
                         
                         modal_html = (
-                            f'<div id="modal-{modal_id}" class="premium-modal-overlay">'
+                            f'<div id="modal-{modal_id}" class="premium-modal-overlay" data-modal-id="{modal_id}">'
                             f'<div class="premium-modal-window">'
                             f'<div class="premium-modal-header">'
                             f'<h3 class="premium-modal-title">📄 {safe_metadata} 원문</h3>'
-                            f'<button class="premium-modal-close" onclick="closePremiumModal(\'{modal_id}\')">&times;</button>'
+                            f'<button class="premium-modal-close premium-modal-close-btn" data-modal-id="{modal_id}">&times;</button>'
                             f'</div>'
                             f'<div class="premium-modal-body">'
                             f'<div style="font-weight:700;color:#1e60ff;margin-bottom:12px;font-size:0.85rem;">유사도 매칭 점수: {score:.4f}</div>'
                             f'<div style="background-color:#f8fafc;border:1px solid #e2e8f0;padding:18px;border-radius:10px;max-height:400px;overflow-y:auto;">{safe_content}</div>'
                             f'</div>'
                             f'<div class="premium-modal-footer">'
-                            f'<button class="premium-modal-footer-btn" onclick="closePremiumModal(\'{modal_id}\')">확인</button>'
+                            f'<button class="premium-modal-footer-btn premium-modal-close-btn" data-modal-id="{modal_id}">확인</button>'
                             f'</div>'
                             f'</div>'
                             f'</div>'
