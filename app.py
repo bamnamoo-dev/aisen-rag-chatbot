@@ -939,17 +939,15 @@ def render_qa_content():
                         modal_id = f"modal_{idx}_{c_idx}"
                         
                         # 개별 카드 HTML
-                        card_html = f"""
-                        <div class="ref-card-premium" onclick="openPremiumModal('{modal_id}')" title="{metadata}">
-                            <div class="ref-icon-premium" style="background-color: {icon_bg} !important; color: {icon_color} !important;">
-                                {icon}
-                            </div>
-                            <div class="ref-info-premium">
-                                <div class="ref-title-premium">{filename_display}</div>
-                                <div class="ref-score-premium">유사도: {score:.4f}</div>
-                            </div>
-                        </div>
-                        """
+                        card_html = (
+                            f'<div class="ref-card-premium" onclick="openPremiumModal(\'{modal_id}\')" title="{metadata}">'
+                            f'<div class="ref-icon-premium" style="background-color:{icon_bg}!important;color:{icon_color}!important;">{icon}</div>'
+                            f'<div class="ref-info-premium">'
+                            f'<div class="ref-title-premium">{filename_display}</div>'
+                            f'<div class="ref-score-premium">유사도: {score:.4f}</div>'
+                            f'</div>'
+                            f'</div>'
+                        )
                         cards_html.append(card_html)
                         
                         # 모달 HTML (HTML 이스케이프)
@@ -957,40 +955,34 @@ def render_qa_content():
                         safe_metadata = py_html.escape(metadata)
                         safe_content = py_html.escape(content_ui).replace("\n", "<br>")
                         
-                        modal_html = f"""
-                        <div id="modal-{modal_id}" class="premium-modal-overlay">
-                            <div class="premium-modal-window">
-                                <div class="premium-modal-header">
-                                    <h3 class="premium-modal-title">📄 {safe_metadata} 원문</h3>
-                                    <button class="premium-modal-close" onclick="closePremiumModal('{modal_id}')">&times;</button>
-                                </div>
-                                <div class="premium-modal-body">
-                                    <div style="font-weight: 700; color: #1e60ff; margin-bottom: 12px; font-size: 0.85rem;">
-                                        유사도 매칭 점수: {score:.4f}
-                                    </div>
-                                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; max-height: 400px; overflow-y: auto; font-family: 'Pretendard', sans-serif;">
-                                        {safe_content}
-                                    </div>
-                                </div>
-                                <div class="premium-modal-footer">
-                                    <button class="premium-modal-footer-btn" onclick="closePremiumModal('{modal_id}')">확인</button>
-                                </div>
-                            </div>
-                        </div>
-                        """
+                        modal_html = (
+                            f'<div id="modal-{modal_id}" class="premium-modal-overlay">'
+                            f'<div class="premium-modal-window">'
+                            f'<div class="premium-modal-header">'
+                            f'<h3 class="premium-modal-title">📄 {safe_metadata} 원문</h3>'
+                            f'<button class="premium-modal-close" onclick="closePremiumModal(\'{modal_id}\')">&times;</button>'
+                            f'</div>'
+                            f'<div class="premium-modal-body">'
+                            f'<div style="font-weight:700;color:#1e60ff;margin-bottom:12px;font-size:0.85rem;">유사도 매칭 점수: {score:.4f}</div>'
+                            f'<div style="background-color:#f8fafc;border:1px solid #e2e8f0;padding:18px;border-radius:10px;max-height:400px;overflow-y:auto;">{safe_content}</div>'
+                            f'</div>'
+                            f'<div class="premium-modal-footer">'
+                            f'<button class="premium-modal-footer-btn" onclick="closePremiumModal(\'{modal_id}\')">확인</button>'
+                            f'</div>'
+                            f'</div>'
+                            f'</div>'
+                        )
                         modals_html.append(modal_html)
                         
-                    grid_html = f"""
-                    <div class="ref-section-premium">
-                        <div class="ref-section-title-premium">
-                            {section_title}
-                        </div>
-                        <div class="ref-grid-premium">
-                            {"".join(cards_html)}
-                        </div>
-                    </div>
-                    {"".join(modals_html)}
-                    """
+                    cards_combined = "".join(c.strip() for c in cards_html)
+                    modals_combined = "".join(m.strip() for m in modals_html)
+                    grid_html = (
+                        f'<div class="ref-section-premium">'
+                        f'<div class="ref-section-title-premium">{section_title}</div>'
+                        f'<div class="ref-grid-premium">{cards_combined}</div>'
+                        f'</div>'
+                        f'{modals_combined}'
+                    )
                     st.markdown(grid_html, unsafe_allow_html=True)
 
                 if st.session_state.current_tab == "지침서" and message.get("fetched_law"):
