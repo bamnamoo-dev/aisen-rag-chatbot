@@ -97,7 +97,14 @@ GLOBAL_CSS = """
     <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * { font-family: 'Pretendard', sans-serif; }
+    
+    /* 1. 전체 앱 배경 및 럭셔리 에이전트풍 백그라운드 */
+    .stApp {
+        background-color: #f8fafc !important; /* 슬레이트 50 */
+    }
+    
     .main-title { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
+    
     /* 헤더 캡슐 알약 필 (aisen.store 스타일) */
     .header-pill {
         background-color: #eff6ff !important;
@@ -111,23 +118,28 @@ GLOBAL_CSS = """
         margin-bottom: 0.75rem !important;
         text-transform: uppercase !important;
     }
-    /* 사이드바 컨테이너 스타일 (완전 화이트 & 연한 회색 보더 & 상단 여백 축소) */
+    
+    /* 2. 사이드바 컨테이너 스타일 (글라스모피즘 & 부드러운 호버 애니메이션) */
     [data-testid="stSidebar"] {
-        background-color: #ffffff !important;
-        border-right: 1px solid #f1f5f9 !important;
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        border-right: 1px solid #e2e8f0 !important;
+        box-shadow: 4px 0 24px rgba(15, 23, 42, 0.03) !important;
+        backdrop-filter: blur(10px) !important;
     }
     [data-testid="stSidebarUserContent"] {
-        padding-top: 0.5rem !important; /* 상단 공백 최소화 */
+        padding-top: 0.5rem !important;
         padding-bottom: 0.5rem !important;
     }
-    /* 사이드바 내부의 모든 버튼 및 내부 자식 요소 강제 좌측 정렬 */
+    
+    /* 사이드바 내부의 모든 버튼 강제 좌측 정렬 */
     [data-testid="stSidebar"] button {
         display: flex !important;
         align-items: center !important;
         justify-content: flex-start !important;
         text-align: left !important;
     }
-    /* 사이드바 텍스트 줄바꿈 방지(nowrap) 및 말줄임표(ellipsis) 강제 적용 */
+    
+    /* 사이드바 텍스트 줄바꿈 방지 및 말줄임 적용 */
     [data-testid="stSidebar"] button p,
     [data-testid="stSidebar"] button span,
     [data-testid="stSidebar"] button div[data-testid="stMarkdownContainer"] p {
@@ -139,19 +151,20 @@ GLOBAL_CSS = """
         overflow: hidden !important;
         margin: 0 !important;
     }
-    /* 사이드바 내부 엘리먼트 간의 Streamlit 기본 외부 간격 조정 */
+    
+    /* 사이드바 내부 엘리먼트 간 간격 조정 */
     [data-testid="stSidebar"] [data-testid="element-container"] {
-        margin-bottom: 8px !important; /* 세로 간격 미세 조정 */
+        margin-bottom: 6px !important;
         padding-bottom: 0px !important;
     }
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-        gap: 8px !important; /* 위아래 간격 미세 조정 */
+        gap: 6px !important;
     }
-    /* 사이드바 내부 2열 격자의 가로 간격 축소 */
     [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
-        gap: 4px !important; /* 기본 16px에서 4px로 축소하여 가로 간격 좁힘 */
+        gap: 4px !important;
     }
-    /* 글로벌 프라이머리 버튼 (본문 영역 포함 - 대화용 등) */
+    
+    /* 글로벌 프라이머리 버튼 */
     .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
         border-color: #1e60ff !important;
@@ -164,25 +177,25 @@ GLOBAL_CSS = """
         border-color: #1d4ed8 !important;
         box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
-    /* 사이드바 개별 버튼 및 카테고리 카드 디자인 (설명서 카드 테마 매칭) */
+    
+    /* 사이드바 개별 버튼 및 카테고리 카드 디자인 */
     [data-testid="stSidebar"] .stButton > button {
         width: 100% !important;
         text-align: left !important;
         display: flex !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        padding: 6px 8px !important; /* 패딩 대폭 축소하여 한줄 노출 최적화 */
-        border-radius: 8px !important; /* 약간 줄여 더 콤팩트하게 */
-        font-size: 0.78rem !important; /* 폰트 크기 줄임 */
-        margin-bottom: 8px !important;
+        padding: 8px 10px !important;
+        border-radius: 8px !important;
+        font-size: 0.8rem !important;
+        margin-bottom: 6px !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        font-weight: 500 !important;
+        font-weight: 600 !important;
         border: 1px solid #e2e8f0 !important;
         background-color: #ffffff !important;
         color: #475569 !important;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
     }
-    /* 사이드바 버튼 마우스 호버 효과 */
     [data-testid="stSidebar"] .stButton > button:hover {
         border-color: #1e60ff !important;
         color: #1e60ff !important;
@@ -190,7 +203,6 @@ GLOBAL_CSS = """
         transform: translateY(-1px) !important;
         box-shadow: 0 4px 12px rgba(30, 96, 255, 0.08) !important;
     }
-    /* 사이드바 내 활성화된 버튼 (kind = primary) 스타일 */
     [data-testid="stSidebar"] .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
         color: #ffffff !important;
@@ -204,6 +216,7 @@ GLOBAL_CSS = """
         border-color: #1d4ed8 !important;
         box-shadow: 0 6px 20px rgba(30, 96, 255, 0.28) !important;
     }
+    
     /* ⭐ 자동 분류 버튼 오렌지색 전용 스타일 */
     .auto-routing-btn-container button[kind="primary"] {
         background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
@@ -229,6 +242,7 @@ GLOBAL_CSS = """
         background-color: #ffedd5 !important;
         box-shadow: 0 4px 12px rgba(255, 82, 0, 0.1) !important;
     }
+    
     /* 지침서 다운로드 박스 프리미엄 스타일 */
     .file-container {
         background-color: #f0fdf4 !important;
@@ -255,7 +269,6 @@ GLOBAL_CSS = """
         font-weight: 600 !important;
         transition: all 0.2s ease !important;
     }
-    /* 다운로드 버튼 내부 텍스트 완전 좌측 정렬 강제 및 넘치는 파일명 자동 말줄임(Ellipsis) 적용 */
     .file-container .stDownloadButton > button div[data-testid="stMarkdownContainer"],
     .file-container .stDownloadButton > button p,
     .file-container .stDownloadButton > button span {
@@ -275,18 +288,18 @@ GLOBAL_CSS = """
         transform: translateY(-1px) !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
     }
+    
     /* 설명서 다운로드 박스 프리미엄 스타일 */
     .manual-container {
         background-color: #eff6ff !important;
         border-radius: 12px !important;
-        padding: 8px 10px !important; /* 패딩 대폭 축소 */
-        margin-top: 2px !important;    /* 마진 축소 */
-        margin-bottom: 8px !important; /* 마진 축소 */
+        padding: 8px 10px !important;
+        margin-top: 2px !important;
+        margin-bottom: 8px !important;
         border: 1px solid #bfdbfe !important;
         border-left: 4px solid #1e60ff !important;
         box-shadow: 0 2px 8px rgba(30, 96, 255, 0.04) !important;
     }
-    /* 설명서 내부 보기 버튼 스타일 개별 오버라이드 */
     .manual-container .stButton > button {
         width: 100% !important;
         text-align: left !important;
@@ -321,27 +334,34 @@ GLOBAL_CSS = """
         transform: translateY(-1px) !important;
         box-shadow: 0 2px 6px rgba(0,0,0,0.03) !important;
     }
-    /* 보기 활성화 상태 스타일 */
     .manual-container .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #1e60ff 0%, #0d47a1 100%) !important;
         color: #ffffff !important;
         border-color: #1e60ff !important;
         box-shadow: 0 4px 10px rgba(30, 96, 255, 0.15) !important;
     }
-    /* 대화 카드형 스타일 및 Pretendard 최적화 */
+    
+    /* 3. 대화 카드형 말풍선 럭셔리 섀도우 및 보더 스타일 (Pretendard 최적화) */
     [data-testid="stChatMessage"] {
         background-color: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
-        border-radius: 16px !important;
-        padding: 24px 28px !important;
-        margin-bottom: 18px !important;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.02), 0 1px 3px rgba(15, 23, 42, 0.01) !important;
-        transition: all 0.25s ease !important;
+        border-radius: 20px !important;
+        padding: 22px 26px !important;
+        margin-bottom: 20px !important;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.02), 0 0 0 1px rgba(15, 23, 42, 0.01) !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     [data-testid="stChatMessage"]:hover {
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02) !important;
-        border-color: rgba(30, 96, 255, 0.2) !important;
+        box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.07), 0 10px 10px -6px rgba(15, 23, 42, 0.04) !important;
+        border-color: rgba(30, 96, 255, 0.22) !important;
     }
+    
+    /* 사용자 대화 메시지 구별을 위해 살짝 다른 배경 주입 */
+    [data-testid="stChatMessage"][data-testid="stChatMessageUser"] {
+        background-color: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+    }
+    
     /* 추천 질문 카드 스타일 - 아이센스토어 시그니처 코발트 블루 매칭 */
     .rec-btn-container .stButton > button {
         background-color: #ffffff !important;
@@ -365,6 +385,7 @@ GLOBAL_CSS = """
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 16px rgba(30, 96, 255, 0.2) !important;
     }
+    
     /* 텍스트 입력창 테두리 가시성 개선 (비밀번호 및 일반 입력칸) */
     div[data-testid="stTextInput"] [data-baseweb="input"] {
         border: 2px solid #cbd5e1 !important;
@@ -381,11 +402,12 @@ GLOBAL_CSS = """
         background-color: transparent !important;
         color: #0f172a !important;
     }
+    
     /* stChatInput 스타일 커스텀 */
     [data-testid="stChatInput"] {
-        border-radius: 16px !important;
-        border: 5px solid #e2e8f0 !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+        border-radius: 20px !important;
+        border: 4px solid #e2e8f0 !important;
+        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08) !important;
         background-color: #ffffff !important;
         transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
     }
@@ -393,7 +415,6 @@ GLOBAL_CSS = """
         font-size: 0.95rem !important;
         color: #0f172a !important;
     }
-    /* 포커스 및 모드별 보더 컬러 동적 스타일링 */
     [data-testid="stChatInput"].mode-orange,
     [data-testid="stChatInput"].mode-orange:focus-within {
         border-color: #ea580c !important;
@@ -409,6 +430,134 @@ GLOBAL_CSS = """
         border-color: #1e60ff !important;
         box-shadow: 0 4px 20px rgba(30, 96, 255, 0.06), 0 0 0 2px rgba(30, 96, 255, 0.15) !important;
     }
+    
+    /* 4. [NEW] 퀵 카테고리 칩(Quick Chips) CSS 디자인 */
+    .quick-chip-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0 18px 0;
+        justify-content: flex-start;
+    }
+    .quick-chip-btn {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #475569 !important;
+        padding: 5px 12px !important;
+        border-radius: 30px !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+    .quick-chip-btn:hover {
+        border-color: #1e60ff !important;
+        color: #1e60ff !important;
+        background-color: #eff6ff !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 10px rgba(30, 96, 255, 0.08) !important;
+    }
+    
+    /* 5. [NEW] RAG 참조 출처용 그리드 문서 카드 CSS 디자인 (충실이 벤치마킹) */
+    .ref-section-premium {
+        margin-top: 18px !important;
+        border-top: 1px dashed #e2e8f0 !important;
+        padding-top: 14px !important;
+        width: 100% !important;
+    }
+    .ref-section-title-premium {
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        margin-bottom: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        text-align: left !important;
+    }
+    .ref-grid-premium {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        margin-bottom: 6px !important;
+        width: 100% !important;
+    }
+    @media (max-width: 900px) {
+        .ref-grid-premium {
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+    }
+    @media (max-width: 600px) {
+        .ref-grid-premium {
+            grid-template-columns: 1fr !important;
+        }
+    }
+    
+    /* 개별 문서 카드 */
+    .ref-card-premium {
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 6px 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        text-decoration: none !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02) !important;
+    }
+    .ref-card-premium:hover {
+        background-color: #f8fafc !important;
+        border-color: #1e60ff !important;
+        box-shadow: 0 4px 12px rgba(30, 96, 255, 0.06) !important;
+    }
+    .ref-icon-premium {
+        width: 28px !important;
+        height: 28px !important;
+        border-radius: 6px !important;
+        background-color: #f1f5f9 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        font-size: 0.85rem !important;
+        color: #475569 !important;
+        transition: all 0.2s ease !important;
+    }
+    .ref-card-premium:hover .ref-icon-premium {
+        background-color: #eff6ff !important;
+        color: #1e60ff !important;
+    }
+    .ref-info-premium {
+        flex: 1 !important;
+        min-width: 0 !important;
+        text-align: left !important;
+    }
+    .ref-title-premium {
+        font-size: 0.76rem !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        line-height: 1.3 !important;
+        text-align: left !important;
+    }
+    .ref-score-premium {
+        font-size: 0.62rem !important;
+        color: #94a3b8 !important;
+        margin-top: 1px !important;
+        display: block !important;
+        text-align: left !important;
+    }
+    
     /* Autocomplete Dropdown styling */
     #autocomplete-dropdown {
         position: absolute;
@@ -451,6 +600,99 @@ GLOBAL_CSS = """
         background-color: #f1f5f9;
         padding: 2px 6px;
         border-radius: 4px;
+    }
+    /* Premium Modal styles */
+    .premium-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(8px);
+        z-index: 999999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+    .premium-modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+    .premium-modal-window {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 650px;
+        max-height: 80vh;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transform: scale(0.95);
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .premium-modal-overlay.active .premium-modal-window {
+        transform: scale(1);
+    }
+    .premium-modal-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f8fafc;
+    }
+    .premium-modal-title {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+    .premium-modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: color 0.2s ease;
+        padding: 0;
+        line-height: 1;
+    }
+    .premium-modal-close:hover {
+        color: #0f172a;
+    }
+    .premium-modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #334155;
+        text-align: left;
+    }
+    .premium-modal-footer {
+        padding: 12px 24px;
+        border-top: 1px solid #f1f5f9;
+        background-color: #f8fafc;
+        display: flex;
+        justify-content: flex-end;
+    }
+    .premium-modal-footer-btn {
+        background-color: #1e60ff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    .premium-modal-footer-btn:hover {
+        background-color: #1d4ed8;
     }
     </style>
     <svg style="display:none;">
@@ -626,7 +868,7 @@ GLOBAL_CSS = """
                                shortcutClean.startsWith(query) ||
                                nameChosung.startsWith(queryChosung) ||
                                shortcutChosung.startsWith(queryChosung);
-                    });
+                     });
                     activeIndex = matched.length > 0 ? 0 : -1;
                     renderDropdown(dropdown, textarea, chatInputContainer, matched);
                 });
@@ -661,6 +903,53 @@ GLOBAL_CSS = """
                 updateBorderColor(textarea, chatInputContainer);
             }
         }, 300);
+
+        // 퀵 칩 버튼 클릭 이벤트 리스너 (최초 1회만 등록)
+        if (!window.quickChipBound) {
+            window.quickChipBound = true;
+            document.addEventListener('click', function(e) {
+                const chip = e.target.closest('.quick-chip-btn');
+                if (chip) {
+                    const shortcut = chip.getAttribute('data-shortcut');
+                    const textarea = document.querySelector('textarea[data-testid="stChatInputTextArea"]');
+                    if (textarea && shortcut) {
+                        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                        if (nativeInputValueSetter) {
+                            nativeInputValueSetter.call(textarea, shortcut + ' ');
+                        } else {
+                            textarea.value = shortcut + ' ';
+                        }
+                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        textarea.focus();
+                        
+                        const chatInputContainer = textarea.closest('[data-testid="stChatInput"]');
+                        if (chatInputContainer) {
+                            updateBorderColor(textarea, chatInputContainer);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 글로벌 프리미엄 모달 제어 함수
+        window.openPremiumModal = function(id) {
+            const modal = document.getElementById('modal-' + id);
+            if (modal) {
+                modal.style.display = 'flex';
+                setTimeout(() => {
+                    modal.classList.add('active');
+                }, 10);
+            }
+        };
+        window.closePremiumModal = function(id) {
+            const modal = document.getElementById('modal-' + id);
+            if (modal) {
+                modal.classList.remove('active');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 250);
+            }
+        };
     })();
     //]]>
     </script>

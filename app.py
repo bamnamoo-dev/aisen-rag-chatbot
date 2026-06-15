@@ -903,15 +903,95 @@ def render_qa_content():
                 # 참조 지침서/법령 팝오버 렌더링
                 if message["role"] == "assistant" and message.get("unique_chunks"):
                     unique_chunks = message["unique_chunks"]
-                    st.markdown("---")
-                    st.markdown("<div style='font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 5px;'>📍 참고 지침 원문 확인</div>" if st.session_state.current_tab == "지침서" else "<div style='font-size: 0.8rem; font-weight: 600; color: #64748b; margin-bottom: 5px;'>📍 참고 법령/조례 원문 확인</div>", unsafe_allow_html=True)
-                    cols = st.columns(min(len(unique_chunks), 5))
+                    section_title = "📍 참고 지침 원문 확인" if st.session_state.current_tab == "지침서" else "📍 참고 법령/조례 원문 확인"
+                    
+                    cards_html = []
+                    modals_html = []
+                    
                     for c_idx, chunk in enumerate(unique_chunks):
-                        with cols[c_idx % 5]:
-                            with st.popover(f"📄 {chunk['metadata'][:12]}...", use_container_width=True):
-                                st.markdown(f"**[{chunk['metadata']}] 원문 (유사도: {chunk['score']:.4f})**")
-                                st.markdown(f"<div style='background: #f8fafc; padding: 10px; border-radius: 5px; font-size: 0.85rem; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto;'>{chunk['content_ui']}</div>", unsafe_allow_html=True)
-                                st.markdown("<div style='font-size: 0.7rem; color: #94a3b8; margin-top: 5px;'>※ 위 내용은 추출된 원문입니다.</div>", unsafe_allow_html=True)
+                        metadata = chunk.get("metadata", "")
+                        score = chunk.get("score", 0.0)
+                        content_ui = chunk.get("content_ui", "")
+                        
+                        # 파일명 파싱
+                        from core.vector_db import get_filename_from_metadata
+                        filename = get_filename_from_metadata(metadata)
+                        if len(filename) > 22:
+                            filename_display = filename[:20] + "..."
+                        else:
+                            filename_display = filename
+                            
+                        # 유형별 아이콘 & 색상
+                        lower_meta = metadata.lower()
+                        if "법률" in lower_meta or "시행령" in lower_meta or "규칙" in lower_meta or "법령" in lower_meta:
+                            icon = "⚖️"
+                            icon_bg = "#ecfdf5"
+                            icon_color = "#10b981"
+                        elif "조례" in lower_meta or "자치법규" in lower_meta:
+                            icon = "🏛️"
+                            icon_bg = "#eff6ff"
+                            icon_color = "#1e60ff"
+                        else:
+                            icon = "📄"
+                            icon_bg = "#fffbeb"
+                            icon_color = "#d97706"
+                            
+                        modal_id = f"modal_{idx}_{c_idx}"
+                        
+                        # 개별 카드 HTML
+                        card_html = f"""
+                        <div class="ref-card-premium" onclick="openPremiumModal('{modal_id}')" title="{metadata}">
+                            <div class="ref-icon-premium" style="background-color: {icon_bg} !important; color: {icon_color} !important;">
+                                {icon}
+                            </div>
+                            <div class="ref-info-premium">
+                                <div class="ref-title-premium">{filename_display}</div>
+                                <div class="ref-score-premium">유사도: {score:.4f}</div>
+                            </div>
+                        </div>
+                        """
+                        cards_html.append(card_html)
+                        
+                        # 모달 HTML (HTML 이스케이프)
+                        import html as py_html
+                        safe_metadata = py_html.escape(metadata)
+                        safe_content = py_html.escape(content_ui).replace("\n", "<br>")
+                        
+                        modal_html = f"""
+                        <div id="modal-{modal_id}" class="premium-modal-overlay">
+                            <div class="premium-modal-window">
+                                <div class="premium-modal-header">
+                                    <h3 class="premium-modal-title">📄 {safe_metadata} 원문</h3>
+                                    <button class="premium-modal-close" onclick="closePremiumModal('{modal_id}')">&times;</button>
+                                </div>
+                                <div class="premium-modal-body">
+                                    <div style="font-weight: 700; color: #1e60ff; margin-bottom: 12px; font-size: 0.85rem;">
+                                        유사도 매칭 점수: {score:.4f}
+                                    </div>
+                                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 10px; max-height: 400px; overflow-y: auto; font-family: 'Pretendard', sans-serif;">
+                                        {safe_content}
+                                    </div>
+                                </div>
+                                <div class="premium-modal-footer">
+                                    <button class="premium-modal-footer-btn" onclick="closePremiumModal('{modal_id}')">확인</button>
+                                </div>
+                            </div>
+                        </div>
+                        """
+                        modals_html.append(modal_html)
+                        
+                    grid_html = f"""
+                    <div class="ref-section-premium">
+                        <div class="ref-section-title-premium">
+                            {section_title}
+                        </div>
+                        <div class="ref-grid-premium">
+                            {"".join(cards_html)}
+                        </div>
+                    </div>
+                    {"".join(modals_html)}
+                    """
+                    st.markdown(grid_html, unsafe_allow_html=True)
 
                 if st.session_state.current_tab == "지침서" and message.get("fetched_law"):
                     law_data = message["fetched_law"]
@@ -1077,6 +1157,29 @@ def render_qa_content():
             else:
                 law_example = "지방공무원법상 직위해제" if selected_category == "상위법령" else "공무원 복무 조례상 특별휴가"
                 input_placeholder = f"궁금하신 {selected_category}에 대해 질문해 주세요. (예: {law_example})"
+                
+            # 퀵 카테고리/법령 검색 칩(Quick Chips) 렌더링
+            if st.session_state.current_tab == "지침서":
+                st.markdown("""
+                    <div class="quick-chip-container">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 4px;">⚡ 퀵 카테고리:</span>
+                        <button class="quick-chip-btn" data-shortcut="/지출">💼 지출</button>
+                        <button class="quick-chip-btn" data-shortcut="/계약">📄 계약</button>
+                        <button class="quick-chip-btn" data-shortcut="/공무원">👤 인사/복무</button>
+                        <button class="quick-chip-btn" data-shortcut="/예산">💰 예산</button>
+                        <button class="quick-chip-btn" data-shortcut="/법령">⚖️ 상위법령</button>
+                        <button class="quick-chip-btn" data-shortcut="/자치법규">🏛️ 자치법규</button>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                    <div class="quick-chip-container">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 4px;">⚡ 퀵 법령검색:</span>
+                        <button class="quick-chip-btn" data-shortcut="/법령">⚖️ 상위법령</button>
+                        <button class="quick-chip-btn" data-shortcut="/자치법규">🏛️ 자치법규</button>
+                    </div>
+                """, unsafe_allow_html=True)
+                
             prompt = st.chat_input(input_placeholder)
 
         if prompt:
