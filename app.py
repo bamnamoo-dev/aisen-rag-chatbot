@@ -1494,7 +1494,22 @@ def render_qa_content():
                         if len(parts) >= 2:
                             main_response = parts[0].strip()
                             rec_str = parts[1].strip()
-                            recommendations = [r.strip().strip("[]").strip() for r in rec_str.split(",")]
+                            
+                            # 1단계: 대괄호 안의 전체 내용이 개별 질문인 경우 추출 (예: [질문1], [질문2], [질문3])
+                            # 단, 대괄호 안이 단순히 '질문1', 'Q1' 같이 짧은 레이블인 경우는 제외
+                            bracket_matches = re.findall(r"\[([^\]]+)\]", rec_str)
+                            if bracket_matches and all(len(m.strip()) > 5 and not re.match(r"^(?:질문|추천질문|Q|q)?\s*\d+$", m.strip()) for m in bracket_matches):
+                                recommendations = [m.strip().strip("[]*_-").strip() for m in bracket_matches if m.strip()]
+                            
+                            # 2단계: 대괄호가 레이블이거나 대괄호가 없는 경우, 질문 번호/레이블 패턴으로 스플릿
+                            if not recommendations:
+                                split_pattern = r"(?:\[?질문\s*\d+\s*\]?|\[?추천\s*질문\s*\d+\s*\]?|(?:\n|^)\s*\d+\.|(?:\n|^)\s*-\s*)"
+                                splits = re.split(split_pattern, rec_str)
+                                recommendations = [r.strip().strip("[]*_-").strip() for r in splits if r.strip() and len(r.strip().strip("[]*_-").strip()) > 5]
+                                
+                            # 3단계: 여전히 1개 이하로 묶여있다면 쉼표(,)로 스플릿 시도
+                            if len(recommendations) <= 1:
+                                recommendations = [r.strip().strip("[]*_-").strip() for r in rec_str.split(",") if r.strip() and len(r.strip().strip("[]*_-").strip()) > 5]
 
                     message_placeholder.markdown(main_response)
                     
