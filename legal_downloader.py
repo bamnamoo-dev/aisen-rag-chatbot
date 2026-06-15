@@ -130,6 +130,72 @@ CORE_TARGETS = [
         "repo": "legalize-kr",
         "path": "kr/건설산업기본법/법률.md",
         "filename": "건설산업기본법.md"
+    },
+    {
+        "name": "건설산업기본법 시행령",
+        "repo": "legalize-kr",
+        "path": "kr/건설산업기본법/시행령.md",
+        "filename": "건설산업기본법_시행령.md"
+    },
+    {
+        "name": "건설산업기본법 시행규칙",
+        "repo": "legalize-kr",
+        "path": "kr/건설산업기본법/시행규칙.md",
+        "filename": "건설산업기본법_시행규칙.md"
+    },
+    {
+        "name": "산업안전보건법",
+        "repo": "legalize-kr",
+        "path": "kr/산업안전보건법/법률.md",
+        "filename": "산업안전보건법.md"
+    },
+    {
+        "name": "산업안전보건법 시행령",
+        "repo": "legalize-kr",
+        "path": "kr/산업안전보건법/시행령.md",
+        "filename": "산업안전보건법_시행령.md"
+    },
+    {
+        "name": "산업안전보건법 시행규칙",
+        "repo": "legalize-kr",
+        "path": "kr/산업안전보건법/시행규칙.md",
+        "filename": "산업안전보건법_시행규칙.md"
+    },
+    {
+        "name": "전기공사업법",
+        "repo": "legalize-kr",
+        "path": "kr/전기공사업법/법률.md",
+        "filename": "전기공사업법.md"
+    },
+    {
+        "name": "전기공사업법 시행령",
+        "repo": "legalize-kr",
+        "path": "kr/전기공사업법/시행령.md",
+        "filename": "전기공사업법_시행령.md"
+    },
+    {
+        "name": "전기공사업법 시행규칙",
+        "repo": "legalize-kr",
+        "path": "kr/전기공사업법/시행규칙.md",
+        "filename": "전기공사업법_시행규칙.md"
+    },
+    {
+        "name": "정보통신공사업법",
+        "repo": "legalize-kr",
+        "path": "kr/정보통신공사업법/법률.md",
+        "filename": "정보통신공사업법.md"
+    },
+    {
+        "name": "정보통신공사업법 시행령",
+        "repo": "legalize-kr",
+        "path": "kr/정보통신공사업법/시행령.md",
+        "filename": "정보통신공사업법_시행령.md"
+    },
+    {
+        "name": "정보통신공사업법 시행규칙",
+        "repo": "legalize-kr",
+        "path": "kr/정보통신공사업법/시행규칙(과학기술정보통신부령).md",
+        "filename": "정보통신공사업법_시행규칙.md"
     }
 ]
 
