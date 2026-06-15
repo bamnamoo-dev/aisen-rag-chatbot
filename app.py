@@ -1252,15 +1252,6 @@ def render_qa_content():
                             "recommendations": faq_recs
                         })
                     st.toast("💡 FAQ 캐시 매칭 성공! 즉시 응답을 출력합니다.", icon="⚡")
-                    # ✅ 사용량 로그 기록 (FAQ 캐시 히트)
-                    append_usage_log(
-                        question=search_prompt,
-                        category=faq_cat,
-                        is_faq_hit=True,
-                        is_auto_route=(selected_category == "⭐ 자동 분류"),
-                        tab=st.session_state.current_tab,
-                        manuals_root=manuals_root
-                    )
                     time.sleep(0.5)
                     st.rerun()
                 # Determine actual category and database dynamically if in Auto Routing mode
@@ -1534,16 +1525,6 @@ def render_qa_content():
                 except Exception as e:
                     st.error(f"오류가 발생했습니다: {e}")
                     return
-
-                # ✅ 사용량 로그 기록 (RAG 정상 답변)
-                append_usage_log(
-                    question=search_prompt,
-                    category=actual_category,
-                    is_faq_hit=False,
-                    is_auto_route=(selected_category == "⭐ 자동 분류"),
-                    tab=st.session_state.current_tab,
-                    manuals_root=manuals_root
-                )
 
                 st.rerun()
     else:
