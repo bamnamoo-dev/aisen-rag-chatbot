@@ -1,5 +1,6 @@
 # config.py
 # 전역 설정, CSS 디자인 상수, 모델 우선순위 리스트 및 프롬프트 템플릿 관리
+import base64
 
 # 1. 모델 가용성 우선순위
 GEMINI_PRIORITY = [
@@ -93,8 +94,7 @@ def get_category_emoji(cat_name):
     return "📁"
 
 # 4. Streamlit 글로벌 CSS 스타일
-GLOBAL_CSS = """
-    <style>
+GLOBAL_CSS_STYLE = """<style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     * { font-family: 'Pretendard', sans-serif; }
     
@@ -695,10 +695,11 @@ GLOBAL_CSS = """
         background-color: #1d4ed8;
     }
     </style>
-    <svg style="display:none;">
-    <script>
-    //<![CDATA[
-    (function() {
+<svg style="display:none;">
+"""
+
+RAW_JS = """
+(function() {
         const categories = [
             { name: '감사', emoji: '📁', shortcut: '/감사' },
             { name: '계약', emoji: '💼', shortcut: '/계약' },
@@ -951,7 +952,8 @@ GLOBAL_CSS = """
             }
         };
     })();
-    //]]>
-    </script>
-    </svg>
 """
+
+JS_BASE64 = base64.b64encode(RAW_JS.encode('utf-8')).decode('utf-8')
+
+GLOBAL_CSS = f"{GLOBAL_CSS_STYLE}<script>eval(atob('{JS_BASE64}'));</script></svg>"
